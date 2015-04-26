@@ -9,6 +9,9 @@ import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.util.Log;
+
+import java.util.Arrays;
 
 
 public class MainActivity extends ActionBarActivity implements SensorEventListener {
@@ -51,7 +54,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-
+        Log.d("Test", Arrays.toString(event.values));
     }
 
     @Override
