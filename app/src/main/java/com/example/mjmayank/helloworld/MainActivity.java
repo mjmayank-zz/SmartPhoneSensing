@@ -10,6 +10,8 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.util.Log;
+import android.widget.Button;
+import android.widget.TextView;
 
 import java.util.Arrays;
 
@@ -18,6 +20,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
     private SensorManager senSensorManager;
     private Sensor senAccelerometer;
+    TextView Xpoint, Ypoint, Zpoint;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,6 +30,9 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         senSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         senSensorManager.registerListener(this, senAccelerometer , SensorManager.SENSOR_DELAY_NORMAL);
+        Xpoint = (TextView) findViewById(R.id.xCoord);
+        Ypoint = (TextView) findViewById(R.id.yCoord);
+        Zpoint = (TextView) findViewById(R.id.zCoord);
     }
 
 
@@ -55,6 +61,9 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     @Override
     public void onSensorChanged(SensorEvent event) {
         Log.d("Test", Arrays.toString(event.values));
+        Xpoint.setText("X-Coordinate: " + event.values[0]);
+        Ypoint.setText("Y-Coordinate: " + event.values[1]);
+        Zpoint.setText("Z-Coordinate: " + event.values[2]);
     }
 
     @Override
