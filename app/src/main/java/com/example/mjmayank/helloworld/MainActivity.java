@@ -13,9 +13,12 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -35,13 +38,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        try //create the file and open a stream writer to it
-        {
-            outputStreamWriter = new OutputStreamWriter(openFileOutput("logger.txt", Context.MODE_PRIVATE));
-        }
-        catch (FileNotFoundException e)
-        {
-            Log.e("Writing Failure", "Can not open stream writer: " + e.toString());
+//        try //create the file and open a stream writer to it
+//        {
+//            outputStreamWriter = new OutputStreamWriter(openFileOutput("logger.txt", Context.MODE_PRIVATE));
+//        }
+//        catch (FileNotFoundException e)
+//        {
+//            Log.e("Writing Failure", "Can not open stream writer: " + e.toString());
+//        }
+
+        try {
+            File myFile = new File("/sdcard/mysdfile.txt");
+            myFile.createNewFile();
+            FileOutputStream fOut = new FileOutputStream(myFile);
+            outputStreamWriter =
+                    new OutputStreamWriter(fOut);
+            Toast.makeText(getBaseContext(),
+                    "Done writing SD 'mysdfile.txt'",
+                    Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(getBaseContext(), e.getMessage(),
+                    Toast.LENGTH_SHORT).show();
         }
 
         Button stop = (Button) findViewById(R.id.stopButton); //Pause your logging
@@ -71,6 +88,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Xpoint = (TextView) findViewById(R.id.xCoord); //Change values of textViews
         Ypoint = (TextView) findViewById(R.id.yCoord);
         Zpoint = (TextView) findViewById(R.id.zCoord);
+
     }
 
 
@@ -84,13 +102,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onSensorChanged(SensorEvent event)
     {
+
+
         Log.d("Test", Arrays.toString(event.values)); //Displaying Values as they change
         Xpoint.setText("X-Coordinate: " + event.values[0]); //Setting textView values to sensor values
         Ypoint.setText("Y-Coordinate: " + event.values[1]);
         Zpoint.setText("Z-Coordinate: " + event.values[2]);
         try //Write values to the file
         {
-            outputStreamWriter.write("X-Coordinate: " + event.values[0] + ", " + "Y-Coordinate: " + event.values[1] + ", " + "Z-Coordinate: " + event.values[2]);
+            outputStreamWriter.write(System.currentTimeMillis() + ", " + event.values[0] + ", " + event.values[1] + ", " + event.values[2] + "\n");
         }
         catch (IOException e) {
             Log.e("Writing Failure", "File write failed: " + e.toString());
