@@ -117,7 +117,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Xpoint.setText("X-Coordinate: " + event.values[0]); //Setting textView values to sensor values
         Ypoint.setText("Y-Coordinate: " + event.values[1]);
         Zpoint.setText("Z-Coordinate: " + event.values[2]);
-        long time = System.currentTimeMillis();
+        long time = System.nanoTime();
         try //Write values to the file
         {
             firstFile.write(time + ", " + event.values[0] + ", " + event.values[1] + ", " + event.values[2] + "\n");
@@ -142,6 +142,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 yThree = event.values[1];
                 zThree = event.values[2];
                 timeThree = time;
+                Log.d("Times:", "one: " + timeOne + ", two: " + timeTwo + ", three: " + timeThree);
+                Log.d("Y:", "one: " + yOne + ", three: " + yThree);
             }
             xSlope = Math.abs((xOne - xThree)/(timeThree - timeOne)); //calculate everything
             ySlope = Math.abs((yOne - yThree)/(timeThree - timeOne));
@@ -169,7 +171,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             xOne = event.values[0];
             yOne = event.values[1];
             zOne = event.values[2];
-
         }
         else if(counter == 1) //assigning second row of xyz **happens once
         {
