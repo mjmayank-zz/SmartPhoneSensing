@@ -157,7 +157,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             zDiff = zMax - zMin;
             try
             {
-                firstFile.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
+                secondFile.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
             }
             catch (IOException e) {
                 Log.e("Writing Failure", "File 2 write failed: " + e.toString());
