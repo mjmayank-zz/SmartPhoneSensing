@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.lang.reflect.Array;
 import java.util.Arrays;
 
 
@@ -167,6 +168,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 
         return ret;
+    }
+
+    protected int[][] compareToData(int[] point, int k){
+        int[][] nearestNeighbors = new int[point.length][k];
+        int min = 9999999;
+        for(int[] data in trainingData){
+            int distance = 0;
+            for(int i=0; i<point.length; i++){
+                distance += (data[i] - point[i]) ** 2;
+            }
+            if(distance ** .5 < min){
+                nearestNeighbors.pop();
+                nearestNeighbors.append(point);
+            }
+        }
+
+        return nearestNeighbors;
     }
 
     protected void onResume() { //Restart the logging, adding more sensor data to the file
