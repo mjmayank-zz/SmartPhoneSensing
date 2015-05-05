@@ -32,8 +32,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private SensorManager senSensorManager;
     private Sensor senAccelerometer;
     TextView Xpoint, Ypoint, Zpoint;
-    OutputStreamWriter firstFile;
-    OutputStreamWriter secondFile;
+    OutputStreamWriter firstFileOSW;
+    OutputStreamWriter secondFileOSW;
     float xOne, yOne, zOne;
     float xTwo, yTwo, zTwo;
     float xThree, yThree, zThree;
@@ -45,32 +45,34 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+/*
           try //create the file and open a stream writer to it
           {
-              firstFile = new OutputStreamWriter(openFileOutput("logger.txt", Context.MODE_PRIVATE));
-              secondFile = new OutputStreamWriter(openFileOutput("calculations.txt", Context.MODE_PRIVATE));
+              firstFileOSW = new OutputStreamWriter(openFileOutput("logger.txt", Context.MODE_PRIVATE));
+              secondFileOSW = new OutputStreamWriter(openFileOutput("calculations.txt", Context.MODE_PRIVATE));
 
           }
           catch (FileNotFoundException e)
           {
               Log.e("Writing Failure", "Can not open stream writer: " + e.toString());
           }
-/*
+          */
+
         try {
-            File myFile = new File("/sdcard/mysdfile.txt");
-            myFile.createNewFile();
-            FileOutputStream fOut = new FileOutputStream(myFile);
-            firstFile =
-                    new OutputStreamWriter(fOut);
-            Toast.makeText(getBaseContext(),
-                    "Done writing SD 'mysdfile.txt'",
-                    Toast.LENGTH_SHORT).show();
+            File firstFile = new File("/sdcard/firstFile.txt");
+            firstFile.createNewFile();
+            File secondFile = new File("/sdcard/secondFile.txt");
+            secondFile.createNewFile();
+            FileOutputStream fOutOne = new FileOutputStream(firstFile);
+            FileOutputStream fOutTwo = new FileOutputStream(secondFile);
+            firstFileOSW = new OutputStreamWriter(fOutOne);
+            secondFileOSW = new OutputStreamWriter(fOutTwo);
+            Toast.makeText(getBaseContext(), "Done writing SD 'fileOne.txt'", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getBaseContext(), "Done writing SD 'secondFile.txt'", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
-            Toast.makeText(getBaseContext(), e.getMessage(),
-                    Toast.LENGTH_SHORT).show();
+            Toast.makeText(getBaseContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
         }
-*/
+
 
         Button stop = (Button) findViewById(R.id.stopButton); //Pause your logging
         stop.setOnClickListener(new View.OnClickListener() {
@@ -120,7 +122,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         long time = System.nanoTime();
         try //Write values to the file
         {
-            firstFile.write(time + ", " + event.values[0] + ", " + event.values[1] + ", " + event.values[2] + "\n");
+            firstFileOSW.write(time + ", " + event.values[0] + ", " + event.values[1] + ", " + event.values[2] + "\n");
         }
         catch (IOException e) {
             Log.e("Writing Failure", "File 1 write failed: " + e.toString());
@@ -142,8 +144,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 yThree = event.values[1];
                 zThree = event.values[2];
                 timeThree = time;
-                Log.d("Times:", "one: " + timeOne + ", two: " + timeTwo + ", three: " + timeThree);
-                Log.d("Y:", "one: " + yOne + ", three: " + yThree);
             }
             xSlope = Math.abs((xOne - xThree)/(timeThree - timeOne)); //calculate everything
             ySlope = Math.abs((yOne - yThree)/(timeThree - timeOne));
@@ -159,7 +159,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             zDiff = zMax - zMin;
             try
             {
-                secondFile.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
+                secondFileOSW.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
             }
             catch (IOException e) {
                 Log.e("Writing Failure", "File 2 write failed: " + e.toString());
@@ -198,10 +198,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onPause();
         try
         {
-            firstFile.flush(); //need to flush stream before displaying
-            secondFile.flush();
-            //Log.d("First File", readFile("logger.txt"));
-            Log.d("Second File", readFile("calculations.txt"));
+            firstFileOSW.flush(); //need to flush stream before displaying
+            secondFileOSW.flush();
+            //Log.d("First File", readFile("firstFile.txt"));
+            //Log.d("Second File", readFile("secondFile.txt"));
         }
         catch (IOException e)
         {
@@ -270,10 +270,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onFinish() { //Finish logging and display all the data you logged
         try
         {
-            firstFile.close();
-            secondFile.close();
-            //Log.d("First File", readFile("logger.txt"));
-            Log.d("Second FIle", readFile("calculations.txt"));
+            firstFileOSW.close();
+            secondFileOSW.close();
+            //Log.d("First File", readFile("firstFile.txt"));
+            //Log.d("Second FIle", readFile("secondFile.txt"));
         } catch (IOException e)
         {
             Log.e("Closing Failure", "Can't Close: " + e.toString());
