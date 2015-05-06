@@ -35,11 +35,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     TextView Xpoint, Ypoint, Zpoint;
     OutputStreamWriter firstFileOSW;
     OutputStreamWriter secondFileOSW;
-    float xOne, yOne, zOne;
-    float xTwo, yTwo, zTwo;
-    float xThree, yThree, zThree;
-    float timeOne, timeTwo, timeThree;
-    float xSlope, ySlope, zSlope, xMax, yMax, zMax, xMin, yMin, zMin, xDiff, yDiff, zDiff;
+    double xOne, yOne, zOne;
+    double xTwo, yTwo, zTwo;
+    double xThree, yThree, zThree;
+    double timeOne, timeTwo, timeThree;
+    double xSlope, ySlope, zSlope, xMax, yMax, zMax, xMin, yMin, zMin, xDiff, yDiff, zDiff;
     int counter = 0;
 
     @Override
@@ -116,6 +116,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onSensorChanged(SensorEvent event)
     {
+        int k = 5;
         Log.d("Test", Arrays.toString(event.values)); //Displaying Values as they change
         Xpoint.setText("X-Coordinate: " + event.values[0]); //Setting textView values to sensor values
         Ypoint.setText("Y-Coordinate: " + event.values[1]);
@@ -161,6 +162,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             try
             {
                 secondFileOSW.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
+                double[] dataPoint = {xSlope, ySlope, zSlope, xDiff, yDiff, zDiff};
+                DataPoint[] queue = compareToData(dataPoint, 3);
+                int numVal = 0;
+                for(int i = 0; i<k; i++){
+                    numVal += queue[i].value;
+                }
+                if(numVal > k/2.0){
+                    //majority value is 1
+                }
+                else{
+                    //majority value is 0
+                }
             }
             catch (IOException e) {
                 Log.e("Writing Failure", "File 2 write failed: " + e.toString());
@@ -244,10 +257,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return ret;
     }
 
-    protected DataPoint[] compareToData(int[] point, int k){
-        int [][] trainingData = new int[10][10];
+    protected DataPoint[] compareToData(double[] point, int k){
+        double [][] trainingData = new double[10][10];
         PriorityQueue<DataPoint> nearestNeighbors = new PriorityQueue<DataPoint>();
-        for(int[] data : trainingData){
+        for(double[] data : trainingData){
             DataPoint dpoint = new DataPoint(data, point);
             nearestNeighbors.add(dpoint);
         }
@@ -276,15 +289,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 }
 
 class DataPoint implements Comparable<DataPoint>{
-    int[] data;
+    double[] data;
     double distance;
+    int value;
 
-    public DataPoint(int[] _data, int[] mainPoint){
+    public DataPoint(double[] _data, double[] mainPoint){
         data = _data;
+        value = (int)_data[data.length-1];
         distance = calculateDistance(mainPoint);
     }
 
-    public double calculateDistance(int[] otherPoint){
+    public double calculateDistance(double[] otherPoint){
         double dist = 0;
         for(int i=0; i<otherPoint.length; i++){
             dist += Math.pow((data[i] - otherPoint[i]), 2);
