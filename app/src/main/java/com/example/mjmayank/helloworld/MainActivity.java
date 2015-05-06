@@ -25,6 +25,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.Array;
 import java.util.Arrays;
+import java.util.PriorityQueue;
 
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
@@ -243,24 +244,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return ret;
     }
 
-    /*
-    protected int[][] compareToData(int[] point, int k){
-        int[][] nearestNeighbors = new int[point.length][k];
-        int min = 9999999;
-        for(int[] data in trainingData){
-            int distance = 0;
-            for(int i=0; i<point.length; i++){
-                distance += (data[i] - point[i]) ** 2;
-            }
-            if(distance ** .5 < min){
-                nearestNeighbors.pop();
-                nearestNeighbors.append(point);
-            }
+    protected DataPoint[] compareToData(int[] point, int k){
+        int [][] trainingData = new int[10][10];
+        PriorityQueue<DataPoint> nearestNeighbors = new PriorityQueue<DataPoint>();
+        for(int[] data : trainingData){
+            DataPoint dpoint = new DataPoint(data, point);
+            nearestNeighbors.add(dpoint);
         }
 
-        return nearestNeighbors;
+        return nearestNeighbors.toArray(new DataPoint[0]);
     }
-    */
 
     protected void onResume() { //Restart the logging, adding more sensor data to the file
         super.onResume();
@@ -279,5 +272,28 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Log.e("Closing Failure", "Can't Close: " + e.toString());
         }
         senSensorManager.unregisterListener(this);
+    }
+}
+
+class DataPoint implements Comparable<DataPoint>{
+    int[] data;
+    double distance;
+
+    public DataPoint(int[] _data, int[] mainPoint){
+        data = _data;
+        distance = calculateDistance(mainPoint);
+    }
+
+    public double calculateDistance(int[] otherPoint){
+        double dist = 0;
+        for(int i=0; i<otherPoint.length; i++){
+            dist += Math.pow((data[i] - otherPoint[i]), 2);
+        }
+        dist = Math.pow(dist, .5);
+        return distance;
+    }
+
+    public int compareTo(DataPoint other){
+        return Double.compare(distance, other.distance);
     }
 }
