@@ -1,6 +1,7 @@
 package com.example.mjmayank.helloworld;
 
 import android.content.Context;
+import android.content.res.AssetManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -24,28 +25,33 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.PriorityQueue;
 
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
-
+    private static final String TAG = MainActivity.class.getSimpleName();
     private SensorManager senSensorManager;
     private Sensor senAccelerometer;
     TextView Xpoint, Ypoint, Zpoint;
     OutputStreamWriter firstFileOSW;
     OutputStreamWriter secondFileOSW;
-    double xOne, yOne, zOne;
-    double xTwo, yTwo, zTwo;
-    double xThree, yThree, zThree;
-    double timeOne, timeTwo, timeThree;
-    double xSlope, ySlope, zSlope, xMax, yMax, zMax, xMin, yMin, zMin, xDiff, yDiff, zDiff;
+    Double[][] xyzvals;
+    Double xOne, yOne, zOne;
+    Double xTwo, yTwo, zTwo;
+    Double xThree, yThree, zThree;
+    long timeOne, timeTwo, timeThree;
+    Double xSlope, ySlope, zSlope, xMax, yMax, zMax, xMin, yMin, zMin, xDiff, yDiff, zDiff;
     int counter = 0;
+    ArrayList<Double[]> trainedData;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        int intervalGroupSize = 3;
+        xyzvals = new Double[3][intervalGroupSize];
 /*
           try //create the file and open a stream writer to it
           {
@@ -74,6 +80,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Toast.makeText(getBaseContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
         }
 
+        trainedData = readFile("trained_data.txt");
+//        Toast.makeText(getBaseContext(), filestuff, Toast.LENGTH_SHORT).show();
 
         Button stop = (Button) findViewById(R.id.stopButton); //Pause your logging
         stop.setOnClickListener(new View.OnClickListener() {
@@ -116,8 +124,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onSensorChanged(SensorEvent event)
     {
-        int k = 5;
-        Log.d("Test", Arrays.toString(event.values)); //Displaying Values as they change
+        int k = 21;
+//        Log.d("Test", Arrays.toString(event.values)); //Displaying Values as they change
         Xpoint.setText("X-Coordinate: " + event.values[0]); //Setting textView values to sensor values
         Ypoint.setText("Y-Coordinate: " + event.values[1]);
         Zpoint.setText("Z-Coordinate: " + event.values[2]);
@@ -128,6 +136,28 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
         catch (IOException e) {
             Log.e("Writing Failure", "File 1 write failed: " + e.toString());
+        }
+
+        if(counter == 0) //assigning first row of xyz **happens once
+        {
+            timeOne = time;
+            xOne = (double)event.values[0];
+            yOne = (double)event.values[1];
+            zOne = (double)event.values[2];
+        }
+        else if(counter == 1) //assigning second row of xyz **happens once
+        {
+            timeTwo = time;
+            xTwo = (double)event.values[0];
+            yTwo = (double)event.values[1];
+            zTwo = (double)event.values[2];
+        }
+        else if(counter == 2) //assigning third row of xyz **happens once
+        {
+            timeThree = time;
+            xThree = (double)event.values[0];
+            yThree = (double)event.values[1];
+            zThree = (double)event.values[2];
         }
 
         if (counter >= 2) //if we have at least 3 lines to analyze to new file
@@ -142,9 +172,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 yTwo = yThree;
                 zTwo = zThree;
                 timeTwo = timeThree;
-                xThree = event.values[0];
-                yThree = event.values[1];
-                zThree = event.values[2];
+                xThree = (double)event.values[0];
+                yThree = (double)event.values[1];
+                zThree = (double)event.values[2];
                 timeThree = time;
             }
             xSlope = Math.abs((xOne - xThree)/(timeThree - timeOne)); //calculate everything
@@ -155,51 +185,41 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             zMax = Math.max(Math.max(zOne, zTwo), zThree);
             xMin = Math.min(Math.min(xOne, xTwo), xThree);
             yMin = Math.min(Math.min(yOne, yTwo), yThree);
-            xMin = Math.min(Math.min(zOne, zTwo), zThree);
-            xDiff = xMax - xMin;
-            yDiff = yMax - yMin;
-            zDiff = zMax - zMin;
+            zMin = Math.min(Math.min(zOne, zTwo), zThree);
+            xDiff = Math.abs(xMax - xMin);
+            yDiff = Math.abs(yMax - yMin);
+            zDiff = Math.abs(zMax - zMin);
             try
             {
                 secondFileOSW.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
-                double[] dataPoint = {xSlope, ySlope, zSlope, xDiff, yDiff, zDiff};
-                DataPoint[] queue = compareToData(dataPoint, 3);
+                Double[] dataPoint = {xSlope, ySlope, zSlope, xDiff, yDiff, zDiff};
+                DataPoint[] queue = compareToData(dataPoint);
+                Log.d(TAG, Arrays.toString(queue));
                 int numVal = 0;
                 for(int i = 0; i<k; i++){
                     numVal += queue[i].value;
                 }
                 if(numVal > k/2.0){
                     //majority value is 1
+                    Toast.makeText(getBaseContext(), "Moving around " + numVal, Toast.LENGTH_SHORT).show();
                 }
                 else{
                     //majority value is 0
+                    Toast.makeText(getBaseContext(), "Standing Still"  + numVal, Toast.LENGTH_SHORT).show();
                 }
             }
             catch (IOException e) {
                 Log.e("Writing Failure", "File 2 write failed: " + e.toString());
             }
         }
-        else if(counter == 0) //assigning first row of xyz **happens once
-        {
-            timeOne = time;
-            xOne = event.values[0];
-            yOne = event.values[1];
-            zOne = event.values[2];
-        }
-        else if(counter == 1) //assigning second row of xyz **happens once
-        {
-            timeTwo = time;
-            xTwo = event.values[0];
-            yTwo = event.values[1];
-            zTwo = event.values[2];
-        }
-        else if(counter == 2) //assigning third row of xyz **happens once
-        {
-            timeThree = time;
-            xThree = event.values[0];
-            yThree = event.values[1];
-            zThree = event.values[2];
-        }
+//
+//        if(counter <= 2) //assigning first row of xyz **happens once
+//        {
+//            timeOne = time;
+//            xyzvals[counter][0] = (double)event.values[0];
+//            xyzvals[counter][1] = (double)event.values[1];
+//            xyzvals[counter][2] = (double)event.values[2];
+//        }
         counter ++;
     }
 
@@ -224,12 +244,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         senSensorManager.unregisterListener(this);
     }
 
-    private String readFile(String fileName) {
-
+    private ArrayList<Double[]> readFile(String fileName) {
         String ret = ""; //start with blank file
+        ArrayList<Double[]> finalData = new ArrayList<Double[]>();
         try
         {
-            InputStream inputStream = openFileInput(fileName); //input stream
+            Context context = this;
+            AssetManager am = context.getAssets();
+            InputStream inputStream = am.open(fileName);
+//            Log.e("test", "test");
+//            InputStream inputStream = openFileInput(fileName); //input stream
             if (inputStream != null) //make sure the file isn't empty
             {
                 InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
@@ -238,6 +262,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 StringBuilder stringBuilder = new StringBuilder();
                 while ((receiveString = bufferedReader.readLine())!= null) //go line by line
                 {
+                    String[] rowData = receiveString.split(",");
+                    Double[] doubleData = new Double[rowData.length];
+                    for(int i = 0; i<rowData.length; i++){
+                        doubleData[i] = Double.parseDouble(rowData[i]);
+                    }
+                    finalData.add(doubleData);
                     stringBuilder.append(receiveString);
                     //*** Not sure how to add new line here so it's easier to read ***
                 }
@@ -254,13 +284,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Log.e("Reading Failure", "Can not read file: " + e.toString());
         }
 
-        return ret;
+        return finalData;
     }
 
-    protected DataPoint[] compareToData(double[] point, int k){
-        double [][] trainingData = new double[10][10];
+    protected DataPoint[] compareToData(Double[] point){
+//        double [][] trainingData = new double[10][10];
         PriorityQueue<DataPoint> nearestNeighbors = new PriorityQueue<DataPoint>();
-        for(double[] data : trainingData){
+        for(Double[] data : trainedData){
             DataPoint dpoint = new DataPoint(data, point);
             nearestNeighbors.add(dpoint);
         }
@@ -289,26 +319,31 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 }
 
 class DataPoint implements Comparable<DataPoint>{
-    double[] data;
-    double distance;
+    Double[] data;
+    Double distance;
     int value;
 
-    public DataPoint(double[] _data, double[] mainPoint){
+    public DataPoint(Double[] _data, Double[] mainPoint){
         data = _data;
-        value = (int)_data[data.length-1];
+        value = _data[data.length-1].intValue();
         distance = calculateDistance(mainPoint);
     }
 
-    public double calculateDistance(double[] otherPoint){
-        double dist = 0;
+    public Double calculateDistance(Double[] otherPoint){
+        Double dist = 0.0;
         for(int i=0; i<otherPoint.length; i++){
             dist += Math.pow((data[i] - otherPoint[i]), 2);
         }
         dist = Math.pow(dist, .5);
+        distance = dist;
         return distance;
     }
 
     public int compareTo(DataPoint other){
         return Double.compare(distance, other.distance);
+    }
+
+    @Override public String toString(){
+        return distance + ", " + value;
     }
 }
