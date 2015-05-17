@@ -6,6 +6,8 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
@@ -52,6 +54,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         setContentView(R.layout.activity_main);
         int intervalGroupSize = 3;
         xyzvals = new Double[3][intervalGroupSize];
+
+        int numberOfLevels = 100;
+        WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+        int level=WifiManager.calculateSignalLevel(wifiInfo.getRssi(), numberOfLevels);
+
 /*
           try //create the file and open a stream writer to it
           {
@@ -177,9 +185,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 zThree = (double)event.values[2];
                 timeThree = time;
             }
-            xSlope = Math.abs((xOne - xThree)/(timeThree - timeOne)); //calculate everything
-            ySlope = Math.abs((yOne - yThree)/(timeThree - timeOne));
-            zSlope = Math.abs((zOne - zThree)/(timeThree - timeOne));
+            xSlope = ((xOne - xThree)/(timeThree - timeOne)); //calculate everything
+            ySlope = ((yOne - yThree)/(timeThree - timeOne));
+            zSlope = ((zOne - zThree)/(timeThree - timeOne));
             xMax = Math.max(Math.max(xOne, xTwo), xThree);
             yMax = Math.max(Math.max(yOne, yTwo), yThree);
             zMax = Math.max(Math.max(zOne, zTwo), zThree);
