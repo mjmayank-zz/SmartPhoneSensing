@@ -1,11 +1,15 @@
 package com.example.mjmayank.helloworld;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.res.AssetManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.net.wifi.ScanResult;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
@@ -29,6 +33,7 @@ import java.io.OutputStreamWriter;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.PriorityQueue;
 
 
@@ -47,6 +52,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     Double xSlope, ySlope, zSlope, xMax, yMax, zMax, xMin, yMin, zMin, xDiff, yDiff, zDiff;
     int counter = 0;
     ArrayList<Double[]> trainedData;
+    WifiManager wifiManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,11 +60,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         setContentView(R.layout.activity_main);
         int intervalGroupSize = 3;
         xyzvals = new Double[3][intervalGroupSize];
-
-        int numberOfLevels = 100;
-        WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-        int level=WifiManager.calculateSignalLevel(wifiInfo.getRssi(), numberOfLevels);
 
 /*
           try //create the file and open a stream writer to it
@@ -84,9 +85,25 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             secondFileOSW = new OutputStreamWriter(fOutTwo);
             Toast.makeText(getBaseContext(), "Done writing SD 'fileOne.txt'", Toast.LENGTH_SHORT).show();
             Toast.makeText(getBaseContext(), "Done writing SD 'secondFile.txt'", Toast.LENGTH_SHORT).show();
+
+            File wifiFile = new File("/sdcard/wifiFile.txt");
+            wifiFile.createNewFile();
+            FileOutputStream fOutWifi = new FileOutputStream(wifiFile);
         } catch (Exception e) {
             Toast.makeText(getBaseContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
         }
+
+        int numberOfLevels = 100;
+        wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+        if (wifiManager.isWifiEnabled() == false) {
+            wifiManager.setWifiEnabled(true);
+        }
+        registerReceiver (new WifiReceiver(), new
+                IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
+        wifiManager.startScan();
+//        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+//        int level = WifiManager.calculateSignalLevel(wifiInfo.getRssi(), numberOfLevels);
+//        Toast.makeText(getBaseContext(), level, Toast.LENGTH_SHORT).show();
 
         trainedData = readFile("trained_data.txt");
 //        Toast.makeText(getBaseContext(), filestuff, Toast.LENGTH_SHORT).show();
@@ -121,6 +138,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
+    public void recalculatePosition(){
+
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -209,11 +229,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
                 if(numVal > k/2.0){
                     //majority value is 1
-                    Toast.makeText(getBaseContext(), "Moving around " + numVal, Toast.LENGTH_SHORT).show();
+//                    Toast.makeText(getBaseContext(), "Moving around " + numVal, Toast.LENGTH_SHORT).show();
                 }
                 else{
                     //majority value is 0
-                    Toast.makeText(getBaseContext(), "Standing Still"  + numVal, Toast.LENGTH_SHORT).show();
+//                    Toast.makeText(getBaseContext(), "Standing Still"  + numVal, Toast.LENGTH_SHORT).show();
                 }
             }
             catch (IOException e) {
@@ -324,6 +344,22 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
         senSensorManager.unregisterListener(this);
     }
+
+    class WifiReceiver extends BroadcastReceiver {
+        // An access point scan has completed and results are sent here
+        public void onReceive(Context c, Intent intent) {
+// Call getScanResults() to obtain the results
+            List<ScanResult> results = wifiManager.getScanResults();
+
+            try {
+                for (int n = 0; n < results.size(); n++) {
+// SSID contains name of AP and level contains RSSI
+                    Log.i("Wifi", "SSID = " + results.get(n).SSID + "; RSSI = " + results.get(n).level);
+                }
+            }
+            catch (Exception e) { }
+        }
+    } // End of class WifiReceiver
 }
 
 class DataPoint implements Comparable<DataPoint>{
