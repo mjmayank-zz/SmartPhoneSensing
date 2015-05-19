@@ -53,6 +53,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     int counter = 0;
     ArrayList<Double[]> trainedData;
     WifiManager wifiManager;
+    WifiReceiver wifiReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -98,7 +99,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (wifiManager.isWifiEnabled() == false) {
             wifiManager.setWifiEnabled(true);
         }
-        registerReceiver (new WifiReceiver(), new
+        wifiReceiver = new WifiReceiver();
+        registerReceiver (wifiReceiver, new
                 IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
         wifiManager.startScan();
 //        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
@@ -222,7 +224,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 secondFileOSW.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
                 Double[] dataPoint = {xSlope, ySlope, zSlope, xDiff, yDiff, zDiff};
                 DataPoint[] queue = compareToData(dataPoint);
-                Log.d(TAG, Arrays.toString(queue));
+//                Log.d(TAG, Arrays.toString(queue));
                 int numVal = 0;
                 for(int i = 0; i<k; i++){
                     numVal += queue[i].value;
@@ -329,6 +331,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onResume() { //Restart the logging, adding more sensor data to the file
         super.onResume();
         senSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+
     }
 
     protected void onFinish() { //Finish logging and display all the data you logged
@@ -343,6 +346,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Log.e("Closing Failure", "Can't Close: " + e.toString());
         }
         senSensorManager.unregisterListener(this);
+    }
+
+    protected void onStop(){
+        unregisterReceiver(wifiReceiver);
     }
 
     class WifiReceiver extends BroadcastReceiver {
