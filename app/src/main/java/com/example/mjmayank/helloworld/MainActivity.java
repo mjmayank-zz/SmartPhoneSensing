@@ -35,6 +35,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.PriorityQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
@@ -44,6 +47,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     TextView Xpoint, Ypoint, Zpoint;
     OutputStreamWriter firstFileOSW;
     OutputStreamWriter secondFileOSW;
+    OutputStreamWriter wifiFileOSW;
     Double[][] xyzvals;
     Double xOne, yOne, zOne;
     Double xTwo, yTwo, zTwo;
@@ -54,6 +58,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     ArrayList<Double[]> trainedData;
     WifiManager wifiManager;
     WifiReceiver wifiReceiver;
+    private static final ScheduledExecutorService worker =
+            Executors.newSingleThreadScheduledExecutor();
+    private static final int NUM_CELLS = 13;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,6 +97,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             File wifiFile = new File("/sdcard/wifiFile.txt");
             wifiFile.createNewFile();
             FileOutputStream fOutWifi = new FileOutputStream(wifiFile);
+            wifiFileOSW = new OutputStreamWriter(fOutWifi);
         } catch (Exception e) {
             Toast.makeText(getBaseContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
         }
@@ -103,6 +111,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         registerReceiver (wifiReceiver, new
                 IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
         wifiManager.startScan();
+//        worker.schedule(new Runnable() {
+//            @Override
+//            public void run() { wifiManager.startScan(); }
+//        }, 5, TimeUnit.SECONDS);
+
 //        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
 //        int level = WifiManager.calculateSignalLevel(wifiInfo.getRssi(), numberOfLevels);
 //        Toast.makeText(getBaseContext(), level, Toast.LENGTH_SHORT).show();
@@ -140,8 +153,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
-    public void recalculatePosition(){
-
+    public void calculatePosition(List<ScanResult> results){
+//        ArrayList<Integer> probabilities = new ArrayList<Integer>();
+//        for(int i = 0; i<NUM_CELLS; i++){
+//            int prob_a_given_b = data[i][results[k].value];
+//            int prob_a = NUM_CELLS;
+//            int prob_b = 255;
+//            probabilities.set(i, prob_a_given_b * prob_a / prob_b);
+//        }
     }
 
     @Override
@@ -359,9 +378,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             List<ScanResult> results = wifiManager.getScanResults();
 
             try {
+                long time = System.nanoTime();
                 for (int n = 0; n < results.size(); n++) {
 // SSID contains name of AP and level contains RSSI
                     Log.i("Wifi", "SSID = " + results.get(n).SSID + "; RSSI = " + results.get(n).level);
+                    try //Write values to the file
+                    {
+                        wifiFileOSW.write(time + ", " + results.get(n).SSID + ", " + results.get(n).level + "\n");
+                    }
+                    catch (IOException e) {
+                        Log.e("Writing Failure", "File 1 write failed: " + e.toString());
+                    }
                 }
             }
             catch (Exception e) { }
