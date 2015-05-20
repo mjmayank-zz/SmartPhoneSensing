@@ -75,7 +75,7 @@
         android:layout_height="wrap_content"
         android:inputType="number"
         android:ems="10"
-        android:id="@+id/editText"
+        android:id="@+id/cellText"
         android:layout_below="@+id/doneButton"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true" />
@@ -83,9 +83,9 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="New Button"
-        android:id="@+id/button"
-        android:layout_below="@+id/editText"
+        android:text="Scan Wifi"
+        android:id="@+id/wifiButton"
+        android:layout_below="@+id/cellText"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true" />
 
@@ -95,7 +95,7 @@
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:text="Large Text"
         android:id="@+id/textView"
-        android:layout_below="@+id/button"
+        android:layout_below="@+id/wifiButton"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true" />
 

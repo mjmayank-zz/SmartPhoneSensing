@@ -370,6 +370,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     protected void onStop(){
+        super.onStop();
         unregisterReceiver(wifiReceiver);
     }
 
