@@ -33,6 +33,8 @@ import java.io.OutputStreamWriter;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Dictionary;
+import java.util.HashMap;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.concurrent.Executors;
@@ -56,6 +58,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     Double xSlope, ySlope, zSlope, xMax, yMax, zMax, xMin, yMin, zMin, xDiff, yDiff, zDiff;
     int counter = 0;
     ArrayList<Double[]> trainedData;
+    HashMap<String, List<Integer>> wifiData;
     WifiManager wifiManager;
     WifiReceiver wifiReceiver;
     private static final ScheduledExecutorService worker =
@@ -121,6 +124,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //        Toast.makeText(getBaseContext(), level, Toast.LENGTH_SHORT).show();
 
         trainedData = readFile("trained_data.txt");
+        wifiData = readWifiFile("wifiFile.txt");
 //        Toast.makeText(getBaseContext(), filestuff, Toast.LENGTH_SHORT).show();
 
         Button stop = (Button) findViewById(R.id.stopButton); //Pause your logging
@@ -300,6 +304,52 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Log.e("Pause Failure", "Didn't Successfully Pause: " + e.toString());
         }
         senSensorManager.unregisterListener(this);
+    }
+
+    private HashMap<String, List<Integer>> readWifiFile(String fileName) {
+        String ret = ""; //start with blank file
+        HashMap<String, List<Integer>> finalData = new HashMap<String, List<Integer>>();
+        try
+        {
+            Context context = this;
+            AssetManager am = context.getAssets();
+            InputStream inputStream = am.open(fileName);
+//            Log.e("test", "test");
+//            InputStream inputStream = openFileInput(fileName); //input stream
+            if (inputStream != null) //make sure the file isn't empty
+            {
+                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                String receiveString = "";
+                StringBuilder stringBuilder = new StringBuilder();
+                while ((receiveString = bufferedReader.readLine())!= null) //go line by line
+                {
+                    String[] rowData = receiveString.split(",");
+                    if(finalData.get(rowData[1]) != null){
+                        finalData.get(rowData[1]).add(Integer.parseInt(rowData[2]));
+                    }
+                    else{
+                        ArrayList<Integer> list = new ArrayList<Integer>();
+                        list.add(Integer.parseInt(rowData[2]));
+                        finalData.put(rowData[1], list);
+                    }
+                    stringBuilder.append(receiveString);
+                    //*** Not sure how to add new line here so it's easier to read ***
+                }
+                inputStream.close();
+                ret = stringBuilder.toString();
+            }
+        }
+        catch (FileNotFoundException e)
+        {
+            Log.e("Reading Failure", "File not found: " + e.toString());
+        }
+        catch (IOException e)
+        {
+            Log.e("Reading Failure", "Can not read file: " + e.toString());
+        }
+
+        return finalData;
     }
 
     private ArrayList<Double[]> readFile(String fileName) {

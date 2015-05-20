@@ -13,9 +13,6 @@
         android:text="X-Coordinate: 0"
         android:id="@+id/xCoord"
         android:layout_alignParentTop="true"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginTop="103dp"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true" />
 
