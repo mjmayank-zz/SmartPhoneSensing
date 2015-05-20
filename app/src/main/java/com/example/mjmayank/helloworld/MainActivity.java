@@ -394,7 +394,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     Log.i("Wifi", "SSID = " + results.get(n).SSID + "; RSSI = " + results.get(n).level);
                     try //Write values to the file
                     {
-                        wifiFileOSW.write(time + ", " + results.get(n).SSID + ", " + results.get(n).level + "\n");
+                        wifiFileOSW.write(time + ", " + ((TextView)findViewById(R.id.cellText)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).level + "\n");
                     }
                     catch (IOException e) {
                         Log.e("Writing Failure", "File 1 write failed: " + e.toString());
