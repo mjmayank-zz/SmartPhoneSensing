@@ -110,7 +110,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         wifiReceiver = new WifiReceiver();
         registerReceiver (wifiReceiver, new
                 IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
-        wifiManager.startScan();
+//        wifiManager.startScan();
 //        worker.schedule(new Runnable() {
 //            @Override
 //            public void run() { wifiManager.startScan(); }
@@ -145,7 +145,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         });
 
         Button wifi = (Button) findViewById(R.id.wifiButton);
-        start.setOnClickListener(new View.OnClickListener() {
+        wifi.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 wifiManager.startScan();
             }
