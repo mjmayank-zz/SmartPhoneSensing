@@ -44,7 +44,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final String TAG = MainActivity.class.getSimpleName();
     private SensorManager senSensorManager;
     private Sensor senAccelerometer;
-    TextView Xpoint, Ypoint, Zpoint;
+    TextView Xpoint, Ypoint, Zpoint, wifiData;
     OutputStreamWriter firstFileOSW;
     OutputStreamWriter secondFileOSW;
     OutputStreamWriter wifiFileOSW;
@@ -157,6 +157,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Xpoint = (TextView) findViewById(R.id.xCoord); //Change values of textViews
         Ypoint = (TextView) findViewById(R.id.yCoord);
         Zpoint = (TextView) findViewById(R.id.zCoord);
+        wifiData = (TextView) findViewById(R.id.wifiData);
 
     }
 
@@ -387,6 +388,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 // Call getScanResults() to obtain the results
             List<ScanResult> results = wifiManager.getScanResults();
 
+
             try {
                 long time = System.nanoTime();
                 for (int n = 0; n < results.size(); n++) {
@@ -394,6 +396,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     Log.i("Wifi", "SSID = " + results.get(n).SSID + "; RSSI = " + results.get(n).level);
                     try //Write values to the file
                     {
+                        //wifiData.setText(wifiData.getText() + ((TextView)findViewById(R.id.cellText)).getText() + ", " + results.get(n).SSID.toString() + ", " + results.get(n).level + "\n");
                         wifiFileOSW.write(time + ", " + ((TextView)findViewById(R.id.cellText)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).level + "\n");
                     }
                     catch (IOException e) {
