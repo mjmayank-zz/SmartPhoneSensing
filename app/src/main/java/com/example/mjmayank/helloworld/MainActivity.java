@@ -144,6 +144,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         });
 
+        Button wifi = (Button) findViewById(R.id.wifiButton);
+        start.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                wifiManager.startScan();
+            }
+        });
+
         senSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE); //Sensor Management
         senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         senSensorManager.registerListener(this, senAccelerometer , SensorManager.SENSOR_DELAY_NORMAL);
