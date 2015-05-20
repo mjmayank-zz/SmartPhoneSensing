@@ -108,7 +108,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             wifiManager.setWifiEnabled(true);
         }
         wifiReceiver = new WifiReceiver();
-        registerReceiver (wifiReceiver, new
+        registerReceiver(wifiReceiver, new
                 IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
 //        wifiManager.startScan();
 //        worker.schedule(new Runnable() {
@@ -400,6 +400,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         Log.e("Writing Failure", "File 1 write failed: " + e.toString());
                     }
                 }
+                Toast.makeText(getBaseContext(), "Scan Completed", Toast.LENGTH_SHORT).show();
             }
             catch (Exception e) { }
         }
