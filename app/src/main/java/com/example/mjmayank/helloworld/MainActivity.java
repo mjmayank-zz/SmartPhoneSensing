@@ -283,6 +283,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         {
             firstFileOSW.flush(); //need to flush stream before displaying
             secondFileOSW.flush();
+            wifiFileOSW.flush();
             //Log.d("First File", readFile("firstFile.txt"));
             //Log.d("Second File", readFile("secondFile.txt"));
         }
@@ -358,6 +359,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         {
             firstFileOSW.close();
             secondFileOSW.close();
+            wifiFileOSW.close();
             //Log.d("First File", readFile("firstFile.txt"));
             //Log.d("Second FIle", readFile("secondFile.txt"));
         } catch (IOException e)
