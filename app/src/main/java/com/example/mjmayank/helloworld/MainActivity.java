@@ -46,7 +46,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final String TAG = MainActivity.class.getSimpleName();
     private SensorManager senSensorManager;
     private Sensor senAccelerometer;
-    TextView Xpoint, Ypoint, Zpoint, wifiDataT;
+    //TextView Xpoint, Ypoint, Zpoint;
+    TextView wifiDataT;
     OutputStreamWriter firstFileOSW;
     OutputStreamWriter secondFileOSW;
     OutputStreamWriter wifiFileOSW;
@@ -127,26 +128,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //        wifiData = readWifiFile("wifiFile.txt");
 //        Toast.makeText(getBaseContext(), filestuff, Toast.LENGTH_SHORT).show();
 
-        Button stop = (Button) findViewById(R.id.stopButton); //Pause your logging
-        stop.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                onPause();
-            }
-        });
+        //Button stop = (Button) findViewById(R.id.stopButton); //Pause your logging
+        //stop.setOnClickListener(new View.OnClickListener() {
+         //   public void onClick(View v) {
+            //    onPause();
+          //  }
+        //});
 
-        Button done = (Button) findViewById(R.id.doneButton); //Finish your logging
-        done.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                onFinish();
-            }
-        });
+//        Button done = (Button) findViewById(R.id.doneButton); //Finish your logging
+//        done.setOnClickListener(new View.OnClickListener() {
+//            public void onClick(View v) {
+//                onFinish();
+//            }
+//        });
 
-        Button start = (Button) findViewById(R.id.startButton); //Start your logging
-        start.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                onResume();
-            }
-        });
+//        Button start = (Button) findViewById(R.id.startButton); //Start your logging
+//        start.setOnClickListener(new View.OnClickListener() {
+//            public void onClick(View v) {
+//                onResume();
+//            }
+//        });
 
         Button wifi = (Button) findViewById(R.id.wifiButton);
         wifi.setOnClickListener(new View.OnClickListener() {
@@ -158,9 +159,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         senSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE); //Sensor Management
         senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         senSensorManager.registerListener(this, senAccelerometer , SensorManager.SENSOR_DELAY_NORMAL);
-        Xpoint = (TextView) findViewById(R.id.xCoord); //Change values of textViews
-        Ypoint = (TextView) findViewById(R.id.yCoord);
-        Zpoint = (TextView) findViewById(R.id.zCoord);
+//        Xpoint = (TextView) findViewById(R.id.xCoord); //Change values of textViews
+//        Ypoint = (TextView) findViewById(R.id.yCoord);
+//        Zpoint = (TextView) findViewById(R.id.zCoord);
         wifiDataT = (TextView) findViewById(R.id.wifiData);
 
     }
@@ -187,9 +188,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     {
         int k = 21;
 //        Log.d("Test", Arrays.toString(event.values)); //Displaying Values as they change
-        Xpoint.setText("X-Coordinate: " + event.values[0]); //Setting textView values to sensor values
-        Ypoint.setText("Y-Coordinate: " + event.values[1]);
-        Zpoint.setText("Z-Coordinate: " + event.values[2]);
+//        Xpoint.setText("X-Coordinate: " + event.values[0]); //Setting textView values to sensor values
+//        Ypoint.setText("Y-Coordinate: " + event.values[1]);
+//        Zpoint.setText("Z-Coordinate: " + event.values[2]);
         long time = System.nanoTime();
         try //Write values to the file
         {
