@@ -123,8 +123,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //        int level = WifiManager.calculateSignalLevel(wifiInfo.getRssi(), numberOfLevels);
 //        Toast.makeText(getBaseContext(), level, Toast.LENGTH_SHORT).show();
 
-        trainedData = readFile("trained_data.txt");
-        wifiData = readWifiFile("wifiFile.txt");
+//        trainedData = readFile("trained_data.txt");
+//        wifiData = readWifiFile("wifiFile.txt");
 //        Toast.makeText(getBaseContext(), filestuff, Toast.LENGTH_SHORT).show();
 
         Button stop = (Button) findViewById(R.id.stopButton); //Pause your logging
@@ -254,20 +254,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             {
                 secondFileOSW.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
                 Double[] dataPoint = {xSlope, ySlope, zSlope, xDiff, yDiff, zDiff};
-                DataPoint[] queue = compareToData(dataPoint);
-//                Log.d(TAG, Arrays.toString(queue));
-                int numVal = 0;
-                for(int i = 0; i<k; i++){
-                    numVal += queue[i].value;
-                }
-                if(numVal > k/2.0){
-                    //majority value is 1
-//                    Toast.makeText(getBaseContext(), "Moving around " + numVal, Toast.LENGTH_SHORT).show();
-                }
-                else{
-                    //majority value is 0
-//                    Toast.makeText(getBaseContext(), "Standing Still"  + numVal, Toast.LENGTH_SHORT).show();
-                }
+//                DataPoint[] queue = compareToData(dataPoint);
+////                Log.d(TAG, Arrays.toString(queue));
+//                int numVal = 0;
+//                for(int i = 0; i<k; i++){
+//                    numVal += queue[i].value;
+//                }
+//                if(numVal > k/2.0){
+//                    //majority value is 1
+////                    Toast.makeText(getBaseContext(), "Moving around " + numVal, Toast.LENGTH_SHORT).show();
+//                }
+//                else{
+//                    //majority value is 0
+////                    Toast.makeText(getBaseContext(), "Standing Still"  + numVal, Toast.LENGTH_SHORT).show();
+//                }
             }
             catch (IOException e) {
                 Log.e("Writing Failure", "File 2 write failed: " + e.toString());
@@ -441,13 +441,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             try {
                 long time = System.nanoTime();
+                wifiDataT.setText("");
                 for (int n = 0; n < results.size(); n++) {
 // SSID contains name of AP and level contains RSSI
-                    Log.i("Wifi", "SSID = " + results.get(n).SSID + "; RSSI = " + results.get(n).level);
                     try //Write values to the file
                     {
-                        String str = time + ", " + ((TextView)findViewById(R.id.cellText)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).level + "\n";
+                        String str = time + ", " + ((TextView)findViewById(R.id.cellText)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).BSSID + ", " + results.get(n).level + "\n";
                         String temp = wifiDataT.getText().toString();
+                        Log.d("Wifi", str);
                         wifiDataT.setText(temp + str);
                         wifiFileOSW.write(str);
                     }
