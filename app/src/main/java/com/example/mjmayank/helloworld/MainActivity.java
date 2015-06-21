@@ -33,6 +33,7 @@ import java.io.OutputStreamWriter;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.List;
@@ -48,15 +49,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Sensor senAccelerometer;
     //TextView Xpoint, Ypoint, Zpoint;
     TextView wifiDataT;
-    OutputStreamWriter firstFileOSW;
-    OutputStreamWriter secondFileOSW;
-    OutputStreamWriter wifiFileOSW;
-    Double[][] xyzvals;
-    Double xOne, yOne, zOne;
-    Double xTwo, yTwo, zTwo;
-    Double xThree, yThree, zThree;
-    long timeOne, timeTwo, timeThree;
-    Double xSlope, ySlope, zSlope, xMax, yMax, zMax, xMin, yMin, zMin, xDiff, yDiff, zDiff;
+    OutputStreamWriter firstFileOSW, calculatedValuesFileOSW, wifiFileOSW;
+    ArrayList<Double> xArr, yArr, zArr;
+    ArrayList<Long> timeArr;
     int counter = 0;
     ArrayList<Double[]> trainedData;
     HashMap<String, List<Integer>> wifiData;
@@ -71,13 +66,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         int intervalGroupSize = 3;
-        xyzvals = new Double[3][intervalGroupSize];
-
+        xArr = new ArrayList<Double>();
+        yArr = new ArrayList<Double>();
+        zArr = new ArrayList<Double>();
 /*
           try //create the file and open a stream writer to it
           {
               firstFileOSW = new OutputStreamWriter(openFileOutput("logger.txt", Context.MODE_PRIVATE));
-              secondFileOSW = new OutputStreamWriter(openFileOutput("calculations.txt", Context.MODE_PRIVATE));
+              calculatedValuesFileOSW = new OutputStreamWriter(openFileOutput("calculations.txt", Context.MODE_PRIVATE));
 
           }
           catch (FileNotFoundException e)
@@ -89,14 +85,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         try {
             File firstFile = new File("/sdcard/firstFile.txt");
             firstFile.createNewFile();
-            File secondFile = new File("/sdcard/secondFile.txt");
-            secondFile.createNewFile();
+            File calculatedValuesFile = new File("/sdcard/calculatedValuesFile.txt");
+            calculatedValuesFile.createNewFile();
             FileOutputStream fOutOne = new FileOutputStream(firstFile);
-            FileOutputStream fOutTwo = new FileOutputStream(secondFile);
+            FileOutputStream fOutTwo = new FileOutputStream(calculatedValuesFile);
             firstFileOSW = new OutputStreamWriter(fOutOne);
-            secondFileOSW = new OutputStreamWriter(fOutTwo);
+            calculatedValuesFileOSW = new OutputStreamWriter(fOutTwo);
             Toast.makeText(getBaseContext(), "Done writing SD 'fileOne.txt'", Toast.LENGTH_SHORT).show();
-            Toast.makeText(getBaseContext(), "Done writing SD 'secondFile.txt'", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getBaseContext(), "Done writing SD 'calculatedValuesFile.txt'", Toast.LENGTH_SHORT).show();
 
             File wifiFile = new File("/sdcard/wifiFile.txt");
             wifiFile.createNewFile();
@@ -114,11 +110,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         wifiReceiver = new WifiReceiver();
         registerReceiver(wifiReceiver, new
                 IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
-//        wifiManager.startScan();
-//        worker.schedule(new Runnable() {
-//            @Override
-//            public void run() { wifiManager.startScan(); }
-//        }, 5, TimeUnit.SECONDS);
 
 //        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
 //        int level = WifiManager.calculateSignalLevel(wifiInfo.getRssi(), numberOfLevels);
@@ -186,7 +177,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onSensorChanged(SensorEvent event)
     {
-        int k = 21;
+        int k = 3;
+        Double xSlope, ySlope, zSlope, xMax, yMax, zMax, xMin, yMin, zMin, xDiff, yDiff, zDiff;
 //        Log.d("Test", Arrays.toString(event.values)); //Displaying Values as they change
 //        Xpoint.setText("X-Coordinate: " + event.values[0]); //Setting textView values to sensor values
 //        Ypoint.setText("Y-Coordinate: " + event.values[1]);
@@ -200,75 +192,45 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Log.e("Writing Failure", "File 1 write failed: " + e.toString());
         }
 
-        if(counter == 0) //assigning first row of xyz **happens once
-        {
-            timeOne = time;
-            xOne = (double)event.values[0];
-            yOne = (double)event.values[1];
-            zOne = (double)event.values[2];
-        }
-        else if(counter == 1) //assigning second row of xyz **happens once
-        {
-            timeTwo = time;
-            xTwo = (double)event.values[0];
-            yTwo = (double)event.values[1];
-            zTwo = (double)event.values[2];
-        }
-        else if(counter == 2) //assigning third row of xyz **happens once
-        {
-            timeThree = time;
-            xThree = (double)event.values[0];
-            yThree = (double)event.values[1];
-            zThree = (double)event.values[2];
-        }
+        xArr.add((double)event.values[0]);
+        yArr.add((double) event.values[1]);
+        zArr.add((double) event.values[2]);
+        timeArr.add(time);
+
+        List<Double> xTemp = xArr.subList(counter - k, counter);
+        List<Double> yTemp = yArr.subList(counter-k, counter);
+        List<Double> zTemp = zArr.subList(counter-k, counter);
+        List<Long> timeTemp = timeArr.subList(counter-k, counter);
 
         if (counter >= 2) //if we have at least 3 lines to analyze to new file
         {
-            if(counter > 2) //need to rearrange what 3 lines we are looking at
-            {
-                xOne = xTwo;
-                yOne = yTwo;
-                zOne = zTwo;
-                timeOne = timeTwo;
-                xTwo = xThree;
-                yTwo = yThree;
-                zTwo = zThree;
-                timeTwo = timeThree;
-                xThree = (double)event.values[0];
-                yThree = (double)event.values[1];
-                zThree = (double)event.values[2];
-                timeThree = time;
-            }
-            xSlope = ((xOne - xThree)/(timeThree - timeOne)); //calculate everything
-            ySlope = ((yOne - yThree)/(timeThree - timeOne));
-            zSlope = ((zOne - zThree)/(timeThree - timeOne));
-            xMax = Math.max(Math.max(xOne, xTwo), xThree);
-            yMax = Math.max(Math.max(yOne, yTwo), yThree);
-            zMax = Math.max(Math.max(zOne, zTwo), zThree);
-            xMin = Math.min(Math.min(xOne, xTwo), xThree);
-            yMin = Math.min(Math.min(yOne, yTwo), yThree);
-            zMin = Math.min(Math.min(zOne, zTwo), zThree);
+            xSlope = (xTemp.get(k-1) - xTemp.get(0))/(timeTemp.get(k-1) - timeTemp.get(0)); //calculate everything
+            ySlope = (yTemp.get(k-1) - yTemp.get(0))/(timeTemp.get(k-1) - timeTemp.get(0));
+            zSlope = (zTemp.get(k-1) - zTemp.get(0))/(timeTemp.get(k-1) - timeTemp.get(0));
+            xMax = Collections.max(xTemp);
+            yMax = Collections.max(yTemp);
+            zMax = Collections.max(zTemp);
+            xMin = Collections.min(xTemp);
+            yMin = Collections.min(yTemp);
+            zMin = Collections.min(zTemp);
             xDiff = Math.abs(xMax - xMin);
             yDiff = Math.abs(yMax - yMin);
             zDiff = Math.abs(zMax - zMin);
             try
             {
-                secondFileOSW.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
+                calculatedValuesFileOSW.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
                 Double[] dataPoint = {xSlope, ySlope, zSlope, xDiff, yDiff, zDiff};
-//                DataPoint[] queue = compareToData(dataPoint);
-////                Log.d(TAG, Arrays.toString(queue));
-//                int numVal = 0;
-//                for(int i = 0; i<k; i++){
-//                    numVal += queue[i].value;
-//                }
-//                if(numVal > k/2.0){
-//                    //majority value is 1
-////                    Toast.makeText(getBaseContext(), "Moving around " + numVal, Toast.LENGTH_SHORT).show();
-//                }
-//                else{
-//                    //majority value is 0
-////                    Toast.makeText(getBaseContext(), "Standing Still"  + numVal, Toast.LENGTH_SHORT).show();
-//                }
+
+                boolean walking = compareToData(dataPoint);
+//                Log.d(TAG, Arrays.toString(queue));
+                if(walking){
+                    //majority value is 1
+                    Toast.makeText(getBaseContext(), "Moving around " + numVal, Toast.LENGTH_SHORT).show();
+                }
+                else{
+                    //majority value is 0
+//                    Toast.makeText(getBaseContext(), "Standing Still"  + numVal, Toast.LENGTH_SHORT).show();
+                }
             }
             catch (IOException e) {
                 Log.e("Writing Failure", "File 2 write failed: " + e.toString());
@@ -295,7 +257,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         try
         {
             firstFileOSW.flush(); //need to flush stream before displaying
-            secondFileOSW.flush();
+            calculatedValuesFileOSW.flush();
             wifiFileOSW.flush();
             //Log.d("First File", readFile("firstFile.txt"));
             //Log.d("Second File", readFile("secondFile.txt"));
@@ -396,7 +358,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return finalData;
     }
 
-    protected DataPoint[] compareToData(Double[] point){
+    protected boolean compareToData(Double[] point, int k){
 //        double [][] trainingData = new double[10][10];
         PriorityQueue<DataPoint> nearestNeighbors = new PriorityQueue<DataPoint>();
         for(Double[] data : trainedData){
@@ -405,6 +367,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 
         return nearestNeighbors.toArray(new DataPoint[0]);
+
+        int numVal = 0;
+        for(int i = 0; i<k; i++){
+            numVal += queue[i].value;
+        }
+        return numVal > k/2.0
     }
 
     protected void onResume() { //Restart the logging, adding more sensor data to the file
@@ -417,7 +385,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         try
         {
             firstFileOSW.close();
-            secondFileOSW.close();
+            calculatedValuesFileOSW.close();
             wifiFileOSW.close();
             //Log.d("First File", readFile("firstFile.txt"));
             //Log.d("Second FIle", readFile("secondFile.txt"));
