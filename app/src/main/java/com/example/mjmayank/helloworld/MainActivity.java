@@ -26,6 +26,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -41,6 +42,8 @@ import java.util.PriorityQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.Map;
+import java.util.Scanner;
 
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
@@ -165,6 +168,36 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //            int prob_b = 255;
 //            probabilities.set(i, prob_a_given_b * prob_a / prob_b);
 //        }
+    }
+
+    protected void createDictionary()
+    {
+        Scanner input = null;
+        Map<String, double[][]> map = new HashMap<String, double[][]>();
+
+        try(BufferedReader br = new BufferedReader(new FileReader("./resources/phone_data.txt"))) {
+            for(String line; (line = br.readLine()) != null; ) {
+                String[] parse = line.split(",");
+                if(map.get(parse[0].trim()) == null) //If the mac address doesn't exist
+                {
+                    double [][] info = new double[256][19];
+                    map.put(parse[0].trim(), info);
+                }
+                if(map.get(parse[0].trim()) != null) //If the mac address does exist
+                {
+                    int cell = Integer.parseInt(parse[1].trim()); //for each cell put all values
+                    for(int value = 2; value < 258; value ++) {
+                        double[][] temp = map.get(parse[0].trim());
+                        double store = Double.parseDouble(parse[value].trim());
+                        temp[value - 2][cell] = store;
+                    }
+                }
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
