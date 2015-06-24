@@ -100,7 +100,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Toast.makeText(getBaseContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
         }
 
-        int numberOfLevels = 100;
         wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         if (wifiManager.isWifiEnabled() == false) {
             wifiManager.setWifiEnabled(true);
@@ -109,34 +108,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         registerReceiver(wifiReceiver, new
                 IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
 
-//        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-//        int level = WifiManager.calculateSignalLevel(wifiInfo.getRssi(), numberOfLevels);
-//        Toast.makeText(getBaseContext(), level, Toast.LENGTH_SHORT).show();
-
 //        trainedData = readFile("trained_data.txt");
 //        wifiData = readWifiFile("wifiFile.txt");
 //        Toast.makeText(getBaseContext(), filestuff, Toast.LENGTH_SHORT).show();
-
-        //Button stop = (Button) findViewById(R.id.stopButton); //Pause your logging
-        //stop.setOnClickListener(new View.OnClickListener() {
-         //   public void onClick(View v) {
-            //    onPause();
-          //  }
-        //});
-
-//        Button done = (Button) findViewById(R.id.doneButton); //Finish your logging
-//        done.setOnClickListener(new View.OnClickListener() {
-//            public void onClick(View v) {
-//                onFinish();
-//            }
-//        });
-
-//        Button start = (Button) findViewById(R.id.startButton); //Start your logging
-//        start.setOnClickListener(new View.OnClickListener() {
-//            public void onClick(View v) {
-//                onResume();
-//            }
-//        });
 
         Button wifi = (Button) findViewById(R.id.wifiButton);
         wifi.setOnClickListener(new View.OnClickListener() {
@@ -153,16 +127,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //        Zpoint = (TextView) findViewById(R.id.zCoord);
         wifiDataT = (TextView) findViewById(R.id.wifiData);
 
-    }
-
-    public void calculatePosition(List<ScanResult> results){
-//        ArrayList<Integer> probabilities = new ArrayList<Integer>();
-//        for(int i = 0; i<NUM_CELLS; i++){
-//            int prob_a_given_b = data[i][results[k].value];
-//            int prob_a = NUM_CELLS;
-//            int prob_b = 255;
-//            probabilities.set(i, prob_a_given_b * prob_a / prob_b);
-//        }
     }
 
     protected Map<String, double[][]> readWifiData()
