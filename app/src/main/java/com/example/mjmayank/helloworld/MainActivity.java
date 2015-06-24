@@ -1,5 +1,6 @@
 package com.example.mjmayank.helloworld;
 
+import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -47,6 +48,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Sensor senAccelerometer;
     //TextView Xpoint, Ypoint, Zpoint;
     TextView wifiDataT;
+    int count = 0;
     OutputStreamWriter accelerometerFileOSW, calculatedValuesFileOSW, wifiFileOSW;
     ArrayList<Double> xArr, yArr, zArr;
     ArrayList<Long> timeArr;
@@ -116,10 +118,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //        wifiData = readWifiFile("wifiFile.txt");
 //        Toast.makeText(getBaseContext(), filestuff, Toast.LENGTH_SHORT).show();
 
-        Button wifi = (Button) findViewById(R.id.wifiButton);
+        Button wifi = (Button) findViewById(R.id.locateMe);
         wifi.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                wifiManager.startScan();
+                for(int i=0; i<5; i++) {
+                    count = i + 1;
+                    wifiManager.startScan();
+                }
             }
         });
 
@@ -142,7 +147,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         try
         {
             Context context = this;
-            AssetManager am = context.getAssets();
+            AssetManager am = getAssets();
             InputStream inputStream = am.open("wifiData.txt");
 //            Log.e("test", "test");
 //            InputStream inputStream = openFileInput(fileName); //input stream
@@ -468,8 +473,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             try {
                 long time = System.nanoTime();
                 wifiDataT.setText("");
-                for (int n = 0; n < results.size(); n++) {
+                String str = Integer.toString(count);
+                String temp = wifiDataT.getText().toString();
+                wifiDataT.setText(temp+str);
+                //for (int n = 0; n < results.size(); n++) {
 // SSID contains name of AP and level contains RSSI
+                    /*
                     try //Write values to the file
                     {
                         String str = time + ", " + ((TextView)findViewById(R.id.cellText)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).BSSID + ", " + results.get(n).level + "\n";
@@ -482,7 +491,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     catch (IOException e) {
                         Log.e("Writing Failure", "File 1 write failed: " + e.toString());
                     }
-                }
+                    */
+               // }
 //                Toast.makeText(getBaseContext(), "Scan Completed", Toast.LENGTH_SHORT).show();
                 int prediction = calculateCell(readings);
                 Toast.makeText(getBaseContext(), "You are in cell " + prediction, Toast.LENGTH_SHORT).show();
@@ -491,6 +501,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     } // End of class WifiReceiver
 }
+
 
 class DataPoint implements Comparable<DataPoint>{
     Double[] data;
