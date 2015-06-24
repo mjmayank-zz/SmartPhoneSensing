@@ -121,10 +121,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Button wifi = (Button) findViewById(R.id.locateMe);
         wifi.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                for(int i=0; i<5; i++) {
-                    count = i + 1;
+                //for(int i=0; i<5; i++) {
+                  //  count = i + 1;
+                   // Log.e("test", Integer.toString(count));
                     wifiManager.startScan();
-                }
+                    //Log.e("test", Integer.toString(count));
+                //}
             }
         });
 
@@ -466,6 +468,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     class WifiReceiver extends BroadcastReceiver {
         // An access point scan has completed and results are sent here
         public void onReceive(Context c, Intent intent) {
+            count++;
+            Log.e("test", Integer.toString(count));
 // Call getScanResults() to obtain the results
             List<ScanResult> results = wifiManager.getScanResults();
             ArrayList<WifiReading> readings = new ArrayList<>();
@@ -496,6 +500,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //                Toast.makeText(getBaseContext(), "Scan Completed", Toast.LENGTH_SHORT).show();
                 int prediction = calculateCell(readings);
                 Toast.makeText(getBaseContext(), "You are in cell " + prediction, Toast.LENGTH_SHORT).show();
+                Log.e("test", Integer.toString(count));
+                if(count < 5)
+                {
+                    wifiManager.startScan();
+                }
             }
             catch (Exception e) { }
         }
