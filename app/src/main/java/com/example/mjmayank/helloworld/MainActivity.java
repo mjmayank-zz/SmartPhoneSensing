@@ -165,7 +165,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //        }
     }
 
-    protected Map<String, double[][]> createDictionary()
+    protected Map<String, double[][]> readWifiData()
     {
         Scanner input = null;
         Map<String, double[][]> map = new HashMap<String, double[][]>();
@@ -289,15 +289,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 calculatedValuesFileOSW.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
                 Double[] dataPoint = {xSlope, ySlope, zSlope, xDiff, yDiff, zDiff};
 
-                boolean walking = compareToData(dataPoint);
+                boolean walking = compareToQueueData(dataPoint, 3);
 //                Log.d(TAG, Arrays.toString(queue));
                 if(walking){
                     //majority value is 1
-                    Toast.makeText(getBaseContext(), "Moving around " + numVal, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getBaseContext(), "Moving around", Toast.LENGTH_SHORT).show();
                 }
                 else{
                     //majority value is 0
-//                    Toast.makeText(getBaseContext(), "Standing Still"  + numVal, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getBaseContext(), "Standing Still", Toast.LENGTH_SHORT).show();
                 }
             }
             catch (IOException e) {
@@ -383,7 +383,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return finalData;
     }
 
-    private ArrayList<Double[]> readFile(String fileName) {
+    private ArrayList<Double[]> readQueueData(String fileName) {
         String ret = ""; //start with blank file
         ArrayList<Double[]> finalData = new ArrayList<Double[]>();
         try
@@ -426,7 +426,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return finalData;
     }
 
-    protected boolean compareToData(Double[] point, int k){
+    protected boolean compareToQueueData(Double[] point, int k){
 //        double [][] trainingData = new double[10][10];
         PriorityQueue<DataPoint> nearestNeighbors = new PriorityQueue<DataPoint>();
         for(Double[] data : trainedData){
@@ -434,13 +434,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             nearestNeighbors.add(dpoint);
         }
 
-        return nearestNeighbors.toArray(new DataPoint[0]);
-
         int numVal = 0;
         for(int i = 0; i<k; i++){
-            numVal += queue[i].value;
+            numVal += nearestNeighbors.poll().value;
         }
-        return numVal > k/2.0
+        return numVal > k/2.0;
     }
 
     protected void onResume() { //Restart the logging, adding more sensor data to the file
