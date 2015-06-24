@@ -139,28 +139,47 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Scanner input = null;
         HashMap<String, double[][]> map = new HashMap<String, double[][]>();
 
-        try(BufferedReader br = new BufferedReader(new FileReader("./resources/phone_data.txt"))) {
-            for(String line; (line = br.readLine()) != null; ) {
-                String[] parse = line.split(",");
-                if(map.get(parse[0].trim()) == null) //If the mac address doesn't exist
+        try
+        {
+            Context context = this;
+            AssetManager am = context.getAssets();
+            InputStream inputStream = am.open("wifiData.txt");
+//            Log.e("test", "test");
+//            InputStream inputStream = openFileInput(fileName); //input stream
+            if (inputStream != null) //make sure the file isn't empty
+            {
+                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                String receiveString = "";
+                StringBuilder stringBuilder = new StringBuilder();
+                while ((receiveString = bufferedReader.readLine())!= null) //go line by line
                 {
-                    double [][] info = new double[256][19];
-                    map.put(parse[0].trim(), info);
-                }
-                if(map.get(parse[0].trim()) != null) //If the mac address does exist
-                {
-                    int cell = Integer.parseInt(parse[1].trim()); //for each cell put all values
-                    for(int value = 2; value < 258; value ++) {
-                        double[][] temp = map.get(parse[0].trim());
-                        double store = Double.parseDouble(parse[value].trim());
-                        temp[value - 2][cell] = store;
+                    String[] parse = receiveString.split(",");
+                    if(map.get(parse[0].trim()) == null) //If the mac address doesn't exist
+                    {
+                        double [][] info = new double[256][19];
+                        map.put(parse[0].trim(), info);
+                    }
+                    if(map.get(parse[0].trim()) != null) //If the mac address does exist
+                    {
+                        int cell = Integer.parseInt(parse[1].trim()); //for each cell put all values
+                        for(int value = 2; value < 258; value ++) {
+                            double[][] temp = map.get(parse[0].trim());
+                            double store = Double.parseDouble(parse[value].trim());
+                            temp[value - 2][cell] = store;
+                        }
                     }
                 }
+                inputStream.close();
             }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+        }
+        catch (FileNotFoundException e)
+        {
+            Log.e("Reading Failure", "File not found: " + e.toString());
+        }
+        catch (IOException e)
+        {
+            Log.e("Reading Failure", "Can not read file: " + e.toString());
         }
         return map;
     }
