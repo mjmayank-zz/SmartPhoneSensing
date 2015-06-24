@@ -47,7 +47,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Sensor senAccelerometer;
     //TextView Xpoint, Ypoint, Zpoint;
     TextView wifiDataT;
-    OutputStreamWriter firstFileOSW, calculatedValuesFileOSW, wifiFileOSW;
+    OutputStreamWriter accelerometerFileOSW, calculatedValuesFileOSW, wifiFileOSW;
     ArrayList<Double> xArr, yArr, zArr;
     ArrayList<Long> timeArr;
     int counter = 0;
@@ -57,7 +57,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     WifiReceiver wifiReceiver;
     private static final ScheduledExecutorService worker =
             Executors.newSingleThreadScheduledExecutor();
-    private static final int NUM_CELLS = 13;
+    private static final int NUM_CELLS = 18;
+    HashMap<String, double[][]> globalTrainedWifiData;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,10 +68,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         xArr = new ArrayList<Double>();
         yArr = new ArrayList<Double>();
         zArr = new ArrayList<Double>();
+        timeArr = new ArrayList<Long>();
 /*
           try //create the file and open a stream writer to it
           {
-              firstFileOSW = new OutputStreamWriter(openFileOutput("logger.txt", Context.MODE_PRIVATE));
+              accelerometerFileOSW = new OutputStreamWriter(openFileOutput("logger.txt", Context.MODE_PRIVATE));
               calculatedValuesFileOSW = new OutputStreamWriter(openFileOutput("calculations.txt", Context.MODE_PRIVATE));
 
           }
@@ -87,7 +89,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             calculatedValuesFile.createNewFile();
             FileOutputStream fOutOne = new FileOutputStream(firstFile);
             FileOutputStream fOutTwo = new FileOutputStream(calculatedValuesFile);
-            firstFileOSW = new OutputStreamWriter(fOutOne);
+            accelerometerFileOSW = new OutputStreamWriter(fOutOne);
             calculatedValuesFileOSW = new OutputStreamWriter(fOutTwo);
             Toast.makeText(getBaseContext(), "Done writing SD 'fileOne.txt'", Toast.LENGTH_SHORT).show();
             Toast.makeText(getBaseContext(), "Done writing SD 'calculatedValuesFile.txt'", Toast.LENGTH_SHORT).show();
@@ -99,6 +101,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         } catch (Exception e) {
             Toast.makeText(getBaseContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
         }
+
+        globalTrainedWifiData = readWifiData();
 
         wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         if (wifiManager.isWifiEnabled() == false) {
@@ -119,9 +123,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         });
 
-        senSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE); //Sensor Management
-        senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        senSensorManager.registerListener(this, senAccelerometer , SensorManager.SENSOR_DELAY_NORMAL);
+//        senSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE); //Sensor Management
+//        senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+//        senSensorManager.registerListener(this, senAccelerometer , SensorManager.SENSOR_DELAY_NORMAL);
+
 //        Xpoint = (TextView) findViewById(R.id.xCoord); //Change values of textViews
 //        Ypoint = (TextView) findViewById(R.id.yCoord);
 //        Zpoint = (TextView) findViewById(R.id.zCoord);
@@ -129,10 +134,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
-    protected Map<String, double[][]> readWifiData()
+    protected HashMap<String, double[][]> readWifiData()
     {
         Scanner input = null;
-        Map<String, double[][]> map = new HashMap<String, double[][]>();
+        HashMap<String, double[][]> map = new HashMap<String, double[][]>();
 
         try(BufferedReader br = new BufferedReader(new FileReader("./resources/phone_data.txt"))) {
             for(String line; (line = br.readLine()) != null; ) {
@@ -160,7 +165,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return map;
     }
 
-    protected int calculateCell(ArrayList<WifiReading> wifiReading, HashMap<String, double[][]> trainedWifiData){
+    protected int calculateCell(ArrayList<WifiReading> wifiReading){
+        HashMap<String, double[][]> trainedWifiData = globalTrainedWifiData;
         double[] probs = new double[19];
         Arrays.fill(probs, 1.0 / 17.0);
         Collections.sort(wifiReading);
@@ -218,16 +224,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         long time = System.nanoTime();
         try //Write values to the file
         {
-            firstFileOSW.write(time + ", " + event.values[0] + ", " + event.values[1] + ", " + event.values[2] + "\n");
+            accelerometerFileOSW.write(time + ", " + event.values[0] + ", " + event.values[1] + ", " + event.values[2] + "\n");
         }
         catch (IOException e) {
             Log.e("Writing Failure", "File 1 write failed: " + e.toString());
         }
 
-        xArr.add((double)event.values[0]);
-        yArr.add((double) event.values[1]);
-        zArr.add((double) event.values[2]);
-        timeArr.add(time);
+//        System.out.println(event.values[1]);
+//
+//        xArr.add((double)event.values[0]);
+//        yArr.add((double)event.values[1]);
+//        zArr.add((double)event.values[2]);
+//        timeArr.add(time);
 
         List<Double> xTemp = xArr.subList(counter - k, counter);
         List<Double> yTemp = yArr.subList(counter-k, counter);
@@ -288,7 +296,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onPause();
         try
         {
-            firstFileOSW.flush(); //need to flush stream before displaying
+            accelerometerFileOSW.flush(); //need to flush stream before displaying
             calculatedValuesFileOSW.flush();
             wifiFileOSW.flush();
             //Log.d("First File", readFile("firstFile.txt"));
@@ -301,51 +309,51 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         senSensorManager.unregisterListener(this);
     }
 
-    private HashMap<String, List<Integer>> readWifiFile(String fileName) {
-        String ret = ""; //start with blank file
-        HashMap<String, List<Integer>> finalData = new HashMap<String, List<Integer>>();
-        try
-        {
-            Context context = this;
-            AssetManager am = context.getAssets();
-            InputStream inputStream = am.open(fileName);
-//            Log.e("test", "test");
-//            InputStream inputStream = openFileInput(fileName); //input stream
-            if (inputStream != null) //make sure the file isn't empty
-            {
-                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-                String receiveString = "";
-                StringBuilder stringBuilder = new StringBuilder();
-                while ((receiveString = bufferedReader.readLine())!= null) //go line by line
-                {
-                    String[] rowData = receiveString.split(",");
-                    if(finalData.get(rowData[1]) != null){
-                        finalData.get(rowData[1]).add(Integer.parseInt(rowData[2]));
-                    }
-                    else{
-                        ArrayList<Integer> list = new ArrayList<Integer>();
-                        list.add(Integer.parseInt(rowData[2]));
-                        finalData.put(rowData[1], list);
-                    }
-                    stringBuilder.append(receiveString);
-                    //*** Not sure how to add new line here so it's easier to read ***
-                }
-                inputStream.close();
-                ret = stringBuilder.toString();
-            }
-        }
-        catch (FileNotFoundException e)
-        {
-            Log.e("Reading Failure", "File not found: " + e.toString());
-        }
-        catch (IOException e)
-        {
-            Log.e("Reading Failure", "Can not read file: " + e.toString());
-        }
-
-        return finalData;
-    }
+//    private HashMap<String, List<Integer>> readWifiFile(String fileName) {
+//        String ret = ""; //start with blank file
+//        globalTrainedWifiData = new HashMap<String, List<Integer>>();
+//        try
+//        {
+//            Context context = this;
+//            AssetManager am = context.getAssets();
+//            InputStream inputStream = am.open(fileName);
+////            Log.e("test", "test");
+////            InputStream inputStream = openFileInput(fileName); //input stream
+//            if (inputStream != null) //make sure the file isn't empty
+//            {
+//                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+//                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+//                String receiveString = "";
+//                StringBuilder stringBuilder = new StringBuilder();
+//                while ((receiveString = bufferedReader.readLine())!= null) //go line by line
+//                {
+//                    String[] rowData = receiveString.split(",");
+//                    if(finalData.get(rowData[1]) != null){
+//                        finalData.get(rowData[1]).add(Integer.parseInt(rowData[2]));
+//                    }
+//                    else{
+//                        ArrayList<Integer> list = new ArrayList<Integer>();
+//                        list.add(Integer.parseInt(rowData[2]));
+//                        finalData.put(rowData[1], list);
+//                    }
+//                    stringBuilder.append(receiveString);
+//                    //*** Not sure how to add new line here so it's easier to read ***
+//                }
+//                inputStream.close();
+//                ret = stringBuilder.toString();
+//            }
+//        }
+//        catch (FileNotFoundException e)
+//        {
+//            Log.e("Reading Failure", "File not found: " + e.toString());
+//        }
+//        catch (IOException e)
+//        {
+//            Log.e("Reading Failure", "Can not read file: " + e.toString());
+//        }
+//
+//        return finalData;
+//    }
 
     private ArrayList<Double[]> readQueueData(String fileName) {
         String ret = ""; //start with blank file
@@ -407,14 +415,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     protected void onResume() { //Restart the logging, adding more sensor data to the file
         super.onResume();
-        senSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+//        senSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
 
     }
 
     protected void onFinish() { //Finish logging and display all the data you logged
         try
         {
-            firstFileOSW.close();
+            accelerometerFileOSW.close();
             calculatedValuesFileOSW.close();
             wifiFileOSW.close();
             //Log.d("First File", readFile("firstFile.txt"));
@@ -423,7 +431,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         {
             Log.e("Closing Failure", "Can't Close: " + e.toString());
         }
-        senSensorManager.unregisterListener(this);
+//        senSensorManager.unregisterListener(this);
     }
 
     protected void onStop(){
@@ -436,7 +444,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         public void onReceive(Context c, Intent intent) {
 // Call getScanResults() to obtain the results
             List<ScanResult> results = wifiManager.getScanResults();
-
+            ArrayList<WifiReading> readings = new ArrayList<>();
 
             try {
                 long time = System.nanoTime();
@@ -450,12 +458,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         Log.d("Wifi", str);
                         wifiDataT.setText(temp + str);
                         wifiFileOSW.write(str);
+                        readings.add(new WifiReading(results.get(n).BSSID, results.get(n).level));
                     }
                     catch (IOException e) {
                         Log.e("Writing Failure", "File 1 write failed: " + e.toString());
                     }
                 }
-                Toast.makeText(getBaseContext(), "Scan Completed", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(getBaseContext(), "Scan Completed", Toast.LENGTH_SHORT).show();
+                int prediction = calculateCell(readings);
+                Toast.makeText(getBaseContext(), "You are in cell " + prediction, Toast.LENGTH_SHORT).show();
             }
             catch (Exception e) { }
         }
