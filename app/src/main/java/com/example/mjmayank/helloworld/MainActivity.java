@@ -35,6 +35,7 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.List;
@@ -170,7 +171,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //        }
     }
 
-    protected void createDictionary()
+    protected Map<String, double[][]> createDictionary()
     {
         Scanner input = null;
         Map<String, double[][]> map = new HashMap<String, double[][]>();
@@ -198,6 +199,46 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return map;
+    }
+
+    protected int calculateCell(ArrayList<WifiReading> wifiReading, HashMap<String, double[][]> trainedWifiData){
+        double[] probs = new double[19];
+        Arrays.fill(probs, 1.0 / 17.0);
+        Collections.sort(wifiReading);
+        int predicted_cell = 0;
+        double max_prob = 0.0;
+
+        for(int i=10; i>0; i--){
+//            int num_wifis = wifiReading.size();
+//            if(i>=num_wifis){
+//                for(int j=0; j<19; j++){
+//                    probs[j] *= times_dict[j][num_wifis];
+//                }
+//            }
+            if(trainedWifiData.get(wifiReading.get(i)) != null){
+                double[][] mac_data = trainedWifiData.get(wifiReading.get(i).mac);
+                double[] probs_for_strength = new double[19];
+                for(int cell=0; cell<19; cell++){
+                    probs_for_strength[cell] = mac_data[cell][wifiReading.get(i).strength];
+                    probs[i] *= mac_data[cell][wifiReading.get(i).strength];
+                }
+                double sum = 0.0;
+                for(double j : probs){
+                    sum += j;
+                }
+                for(int j=0; j<probs.length; j++){
+                    probs[j] /= sum;
+                    if(probs[j] > .8){
+                        return j;
+                    }
+                    if(probs[j] > max_prob){
+                        predicted_cell = j;
+                    }
+                }
+            }
+        }
+        return predicted_cell;
     }
 
     @Override
@@ -492,5 +533,19 @@ class DataPoint implements Comparable<DataPoint>{
 
     @Override public String toString(){
         return distance + ", " + value;
+    }
+}
+
+class WifiReading implements Comparable<WifiReading>{
+    String mac;
+    int strength;
+
+    public WifiReading(String _mac, int _strength){
+        mac = _mac;
+        strength = _strength;
+    }
+
+    public int compareTo(WifiReading other){
+        return strength - other.strength;
     }
 }
