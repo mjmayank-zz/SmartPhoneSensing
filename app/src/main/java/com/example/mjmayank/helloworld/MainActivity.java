@@ -59,7 +59,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     WifiReceiver wifiReceiver;
     private static final ScheduledExecutorService worker =
             Executors.newSingleThreadScheduledExecutor();
-    private static final int NUM_CELLS = 18;
+    private static final int NUM_CELLS = 19;
     HashMap<String, double[][]> globalTrainedWifiData;
 
     @Override
@@ -121,12 +121,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Button wifi = (Button) findViewById(R.id.locateMe);
         wifi.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                //for(int i=0; i<5; i++) {
-                  //  count = i + 1;
-                   // Log.e("test", Integer.toString(count));
-                    wifiManager.startScan();
-                    //Log.e("test", Integer.toString(count));
-                //}
+                System.out.println("Scanning");
+                Toast.makeText(getBaseContext(), "Scanning wifi", Toast.LENGTH_SHORT).show();
+                wifiManager.startScan();
             }
         });
 
@@ -188,6 +185,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         {
             Log.e("Reading Failure", "Can not read file: " + e.toString());
         }
+        System.out.println(map);
         return map;
     }
 
@@ -201,31 +199,44 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         for(int i=10; i>0; i--){
 //            int num_wifis = wifiReading.size();
-//            if(i>=num_wifis){
+            if(i>=wifiReading.size()){
+                i = wifiReading.size()-1;
 //                for(int j=0; j<19; j++){
 //                    probs[j] *= times_dict[j][num_wifis];
 //                }
-//            }
-            if(trainedWifiData.get(wifiReading.get(i)) != null){
+                continue;
+            }
+            System.out.println(wifiReading.get(i));
+            if(trainedWifiData.get(wifiReading.get(i).mac) != null){
+                System.out.println("Found MAC");
                 double[][] mac_data = trainedWifiData.get(wifiReading.get(i).mac);
-                double[] probs_for_strength = new double[19];
-                for(int cell=0; cell<19; cell++){
-                    probs_for_strength[cell] = mac_data[cell][wifiReading.get(i).strength];
-                    probs[i] *= mac_data[cell][wifiReading.get(i).strength];
+                for(int cell=0; cell<NUM_CELLS; cell++){
+                    System.out.println(probs[cell]);
+                    System.out.println(wifiReading.get(i).strength);
+                    System.out.println(mac_data[wifiReading.get(i).strength][cell]);
+                    probs[cell] = probs[cell] * mac_data[wifiReading.get(i).strength][cell];
+                    System.out.println(probs[cell]);
                 }
                 double sum = 0.0;
                 for(double j : probs){
                     sum += j;
                 }
+                System.out.println("calculated sum: " + sum);
                 for(int j=0; j<probs.length; j++){
-                    probs[j] /= sum;
+                    probs[j] += .000000001;
+                    probs[j] /= sum + (.000000001 * 19);
                     if(probs[j] > .8){
+                        System.out.println("over 80%");
                         return j;
                     }
                     if(probs[j] > max_prob){
+                        max_prob = probs[j];
                         predicted_cell = j;
                     }
                 }
+            }
+            else{
+                System.out.println("Couldn't find MAC");
             }
         }
         return predicted_cell;
@@ -332,7 +343,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         {
             Log.e("Pause Failure", "Didn't Successfully Pause: " + e.toString());
         }
-        senSensorManager.unregisterListener(this);
+//        senSensorManager.unregisterListener(this);
     }
 
 //    private HashMap<String, List<Integer>> readWifiFile(String fileName) {
@@ -473,7 +484,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 // Call getScanResults() to obtain the results
             List<ScanResult> results = wifiManager.getScanResults();
             ArrayList<WifiReading> readings = new ArrayList<>();
-
+            Toast.makeText(getBaseContext(), "received wifi", Toast.LENGTH_SHORT).show();
             try {
                 long time = System.nanoTime();
                 wifiDataT.setText("");
@@ -548,7 +559,11 @@ class WifiReading implements Comparable<WifiReading>{
 
     public WifiReading(String _mac, int _strength){
         mac = _mac;
-        strength = _strength;
+        strength = _strength * -1;
+    }
+
+    public String toString(){
+        return mac + ": " + strength;
     }
 
     public int compareTo(WifiReading other){
