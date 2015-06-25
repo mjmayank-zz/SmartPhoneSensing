@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     //TextView Xpoint, Ypoint, Zpoint;
     TextView wifiDataT;
     int count = 0;
-    OutputStreamWriter accelerometerFileOSW, calculatedValuesFileOSW, wifiFileOSW;
+    OutputStreamWriter accelerometerFileOSW, calculatedValuesFileOSW, wifiFileOSW, confMatrixFileOSW;
     ArrayList<Double> xArr, yArr, zArr;
     ArrayList<Long> timeArr;
     int counter = 0;
@@ -87,19 +87,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         try {
             File firstFile = new File("/sdcard/firstFile.txt");
             firstFile.createNewFile();
+            FileOutputStream fOutOne = new FileOutputStream(firstFile);
+            accelerometerFileOSW = new OutputStreamWriter(fOutOne);
+
             File calculatedValuesFile = new File("/sdcard/calculatedValuesFile.txt");
             calculatedValuesFile.createNewFile();
-            FileOutputStream fOutOne = new FileOutputStream(firstFile);
             FileOutputStream fOutTwo = new FileOutputStream(calculatedValuesFile);
-            accelerometerFileOSW = new OutputStreamWriter(fOutOne);
             calculatedValuesFileOSW = new OutputStreamWriter(fOutTwo);
-            Toast.makeText(getBaseContext(), "Done writing SD 'fileOne.txt'", Toast.LENGTH_SHORT).show();
-            Toast.makeText(getBaseContext(), "Done writing SD 'calculatedValuesFile.txt'", Toast.LENGTH_SHORT).show();
 
             File wifiFile = new File("/sdcard/wifiFile.txt");
             wifiFile.createNewFile();
             FileOutputStream fOutWifi = new FileOutputStream(wifiFile);
             wifiFileOSW = new OutputStreamWriter(fOutWifi);
+
+            File matrixFile = new File("/sdcard/confMatrix.txt");
+            matrixFile.createNewFile();
+            FileOutputStream fOutMatrix = new FileOutputStream(matrixFile);
+            confMatrixFileOSW = new OutputStreamWriter(fOutMatrix);
         } catch (Exception e) {
             Toast.makeText(getBaseContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
         }
@@ -336,6 +340,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             accelerometerFileOSW.flush(); //need to flush stream before displaying
             calculatedValuesFileOSW.flush();
             wifiFileOSW.flush();
+            confMatrixFileOSW.flush();
             //Log.d("First File", readFile("firstFile.txt"));
             //Log.d("Second File", readFile("secondFile.txt"));
         }
@@ -345,52 +350,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 //        senSensorManager.unregisterListener(this);
     }
-
-//    private HashMap<String, List<Integer>> readWifiFile(String fileName) {
-//        String ret = ""; //start with blank file
-//        globalTrainedWifiData = new HashMap<String, List<Integer>>();
-//        try
-//        {
-//            Context context = this;
-//            AssetManager am = context.getAssets();
-//            InputStream inputStream = am.open(fileName);
-////            Log.e("test", "test");
-////            InputStream inputStream = openFileInput(fileName); //input stream
-//            if (inputStream != null) //make sure the file isn't empty
-//            {
-//                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-//                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-//                String receiveString = "";
-//                StringBuilder stringBuilder = new StringBuilder();
-//                while ((receiveString = bufferedReader.readLine())!= null) //go line by line
-//                {
-//                    String[] rowData = receiveString.split(",");
-//                    if(finalData.get(rowData[1]) != null){
-//                        finalData.get(rowData[1]).add(Integer.parseInt(rowData[2]));
-//                    }
-//                    else{
-//                        ArrayList<Integer> list = new ArrayList<Integer>();
-//                        list.add(Integer.parseInt(rowData[2]));
-//                        finalData.put(rowData[1], list);
-//                    }
-//                    stringBuilder.append(receiveString);
-//                    //*** Not sure how to add new line here so it's easier to read ***
-//                }
-//                inputStream.close();
-//                ret = stringBuilder.toString();
-//            }
-//        }
-//        catch (FileNotFoundException e)
-//        {
-//            Log.e("Reading Failure", "File not found: " + e.toString());
-//        }
-//        catch (IOException e)
-//        {
-//            Log.e("Reading Failure", "Can not read file: " + e.toString());
-//        }
-//
-//        return finalData;
-//    }
 
     private ArrayList<Double[]> readQueueData(String fileName) {
         String ret = ""; //start with blank file
@@ -462,6 +421,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             accelerometerFileOSW.close();
             calculatedValuesFileOSW.close();
             wifiFileOSW.close();
+            confMatrixFileOSW.close();
             //Log.d("First File", readFile("firstFile.txt"));
             //Log.d("Second FIle", readFile("secondFile.txt"));
         } catch (IOException e)
@@ -510,6 +470,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
                 Toast.makeText(getBaseContext(), "Scan Completed", Toast.LENGTH_SHORT).show();
                 int prediction = calculateCell(readings);
+                confMatrixFileOSW.write(prediction + "," + ((TextView)findViewById(R.id.cellText)).getText());
                 Toast.makeText(getBaseContext(), "You are in cell " + prediction, Toast.LENGTH_SHORT).show();
                 Log.e("test", Integer.toString(count));
                 if(count < 5)
