@@ -61,6 +61,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Executors.newSingleThreadScheduledExecutor();
     private static final int NUM_CELLS = 19;
     HashMap<String, double[][]> globalTrainedWifiData;
+    Integer[] predictions = new Integer[20];
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +72,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         yArr = new ArrayList<Double>();
         zArr = new ArrayList<Double>();
         timeArr = new ArrayList<Long>();
+        for(int pos = 0; pos < 20; pos++)
+        {
+            predictions[pos] = 0;
+        }
+
+
 /*
           try //create the file and open a stream writer to it
           {
@@ -471,11 +478,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 Toast.makeText(getBaseContext(), "Scan Completed", Toast.LENGTH_SHORT).show();
                 int prediction = calculateCell(readings);
                 confMatrixFileOSW.write(prediction + "," + ((TextView)findViewById(R.id.cellText)).getText());
-                Toast.makeText(getBaseContext(), "You are in cell " + prediction, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getBaseContext(), "You are in cell " + prediction, Toast.LENGTH_SHORT).show();
+                predictions[prediction] = predictions[prediction] + 1;
                 Log.e("test", Integer.toString(count));
-                if(count < 5)
+                if(count < 10)
                 {
                     wifiManager.startScan();
+                }
+                else if(count == 10)
+                {
+                    int value = 0;
+                    int cell = 0;
+                    for(int x = 1; x < 19; x++)
+                    {
+                        if(predictions[x] > value)
+                        {
+                            value = predictions[x];
+                            cell = x;
+                        }
+                    }
+                    Toast.makeText(getBaseContext(), "You are in cell " + cell, Toast.LENGTH_SHORT).show();
+                    count = 0;
                 }
             }
             catch (Exception e) { }
