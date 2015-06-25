@@ -491,7 +491,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 String str = Integer.toString(count);
                 String temp = wifiDataT.getText().toString();
                 wifiDataT.setText(temp+str);
-                //for (int n = 0; n < results.size(); n++) {
+                for (int n = 0; n < results.size(); n++) {
 // SSID contains name of AP and level contains RSSI
                     /*
                     try //Write values to the file
@@ -501,13 +501,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         Log.d("Wifi", str);
                         wifiDataT.setText(temp + str);
                         wifiFileOSW.write(str);
-                        readings.add(new WifiReading(results.get(n).BSSID, results.get(n).level));
                     }
                     catch (IOException e) {
                         Log.e("Writing Failure", "File 1 write failed: " + e.toString());
                     }
                     */
-               // }
+                    readings.add(new WifiReading(results.get(n).BSSID, results.get(n).level));
+                }
 //                Toast.makeText(getBaseContext(), "Scan Completed", Toast.LENGTH_SHORT).show();
                 int prediction = calculateCell(readings);
                 Toast.makeText(getBaseContext(), "You are in cell " + prediction, Toast.LENGTH_SHORT).show();
