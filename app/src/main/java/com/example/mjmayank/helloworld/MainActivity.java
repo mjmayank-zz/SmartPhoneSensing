@@ -496,7 +496,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                     try //Write values to the file
                     {
-                        String string = time + ", " + ((TextView)findViewById(R.id.wifiData)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).BSSID + ", " + results.get(n).level + "\n";
+                        String string = time + ", " + ((TextView)findViewById(R.id.cellText)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).BSSID + ", " + results.get(n).level + "\n";
                         //String temporary = wifiDataT.getText().toString();
                         //Log.d("Wifi", string);
                         //wifiDataT.setText(temporary + string);
