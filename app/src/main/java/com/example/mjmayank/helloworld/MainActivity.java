@@ -498,6 +498,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         }
                     }
                     Toast.makeText(getBaseContext(), "You are in cell " + cell, Toast.LENGTH_SHORT).show();
+                    for(int x=1; x<19; x++)
+                    {
+                        predictions[x] = 0;
+                    }
                     count = 0;
                 }
             }
