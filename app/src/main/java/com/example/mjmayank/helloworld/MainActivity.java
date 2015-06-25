@@ -493,22 +493,22 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 wifiDataT.setText(temp+str);
                 for (int n = 0; n < results.size(); n++) {
 // SSID contains name of AP and level contains RSSI
-                    /*
+
                     try //Write values to the file
                     {
-                        String str = time + ", " + ((TextView)findViewById(R.id.cellText)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).BSSID + ", " + results.get(n).level + "\n";
-                        String temp = wifiDataT.getText().toString();
-                        Log.d("Wifi", str);
-                        wifiDataT.setText(temp + str);
-                        wifiFileOSW.write(str);
+                        String string = time + ", " + ((TextView)findViewById(R.id.wifiData)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).BSSID + ", " + results.get(n).level + "\n";
+                        //String temporary = wifiDataT.getText().toString();
+                        //Log.d("Wifi", string);
+                        //wifiDataT.setText(temporary + string);
+                        wifiFileOSW.write(string);
                     }
                     catch (IOException e) {
                         Log.e("Writing Failure", "File 1 write failed: " + e.toString());
                     }
-                    */
+
                     readings.add(new WifiReading(results.get(n).BSSID, results.get(n).level));
                 }
-//                Toast.makeText(getBaseContext(), "Scan Completed", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getBaseContext(), "Scan Completed", Toast.LENGTH_SHORT).show();
                 int prediction = calculateCell(readings);
                 Toast.makeText(getBaseContext(), "You are in cell " + prediction, Toast.LENGTH_SHORT).show();
                 Log.e("test", Integer.toString(count));
