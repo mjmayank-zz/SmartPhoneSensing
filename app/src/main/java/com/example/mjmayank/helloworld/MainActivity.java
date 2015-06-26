@@ -81,7 +81,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         setContentView(R.layout.activity_main);
         int intervalGroupSize = 3;
         prob = (TextView)findViewById(R.id.probability);
-        belief = (TextView) findViewById(R.id.initialBeliefText);
         queueIt = (TextView) findViewById(R.id.queueStatus);
         xArr = new ArrayList<Double>();
         yArr = new ArrayList<Double>();
@@ -92,22 +91,22 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         resetProbabilities();
 
         try {
-            File firstFile = new File("/sdcard/accelerometerData" + System.nanoTime() + ".txt");
+            File firstFile = new File("/sdcard/accelerometerData.txt");
             firstFile.createNewFile();
             FileOutputStream fOutOne = new FileOutputStream(firstFile);
             accelerometerFileOSW = new OutputStreamWriter(fOutOne);
 
-            File calculatedValuesFile = new File("/sdcard/calculatedValuesFile" + System.nanoTime() + ".txt");
+            File calculatedValuesFile = new File("/sdcard/calculatedValuesFile.txt");
             calculatedValuesFile.createNewFile();
             FileOutputStream fOutTwo = new FileOutputStream(calculatedValuesFile);
             calculatedValuesFileOSW = new OutputStreamWriter(fOutTwo);
 
-            File wifiFile = new File("/sdcard/wifiFile" + System.nanoTime() + ".txt");
+            File wifiFile = new File("/sdcard/wifiFile.txt");
             wifiFile.createNewFile();
             FileOutputStream fOutWifi = new FileOutputStream(wifiFile);
             wifiFileOSW = new OutputStreamWriter(fOutWifi);
 
-            File matrixFile = new File("/sdcard/confMatrix" + System.nanoTime() + ".txt");
+            File matrixFile = new File("/sdcard/confMatrix.txt");
             matrixFile.createNewFile();
             FileOutputStream fOutMatrix = new FileOutputStream(matrixFile);
             confMatrixFileOSW = new OutputStreamWriter(fOutMatrix);
@@ -313,7 +312,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             return 0;
         }
         else{
-            return maxIndex;
+            if(maxVal > 1)
+                return maxIndex;
+            return 0;
         }
     }
 
