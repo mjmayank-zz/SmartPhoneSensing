@@ -71,6 +71,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final int NUM_CELLS = 19;
     HashMap<String, double[][]> globalTrainedWifiData;
     HashMap<String, ArrayList<Integer>> currSessionWifiData;
+    ArrayList<Integer> currSessionPredictions;
     Integer[] predictions = new Integer[20];
     boolean stop;
 
@@ -114,19 +115,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Toast.makeText(getBaseContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
         }
 
-/*
-          try //create the file and open a stream writer to it
-          {
-              accelerometerFileOSW = new OutputStreamWriter(openFileOutput("logger.txt", Context.MODE_PRIVATE));
-              calculatedValuesFileOSW = new OutputStreamWriter(openFileOutput("calculations.txt", Context.MODE_PRIVATE));
-
-          }
-          catch (FileNotFoundException e)
-          {
-              Log.e("Writing Failure", "Can not open stream writer: " + e.toString());
-          }
-          */
-
         globalTrainedWifiData = readWifiData();
         numWifiData = readNumWifiData();
 
@@ -146,7 +134,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         wifi.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 stop = false;
-                System.out.println("Scanning");
+                resetProbabilities();
+                wifiDataT.setText("Scanning");
                 Toast.makeText(getBaseContext(), "Scanning wifi", Toast.LENGTH_SHORT).show();
                 wifiManager.startScan();
             }
@@ -155,35 +144,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Button reset = (Button) findViewById(R.id.initialBelief);
         reset.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                wifiDataT.setText("Scan stopped");
                 stop = true;
                 resetProbabilities();
-//                for(int x = 1; x < 19; x++)
-//                {
-//                    predictions[x] = 0;
-//                }
-//
-//                int value = 0;
-//                int cell = 0;
-//                for(int x = 1; x < 19; x++)
-//                {
-//                    if(predictions[x] > value)
-//                    {
-//                        value = predictions[x];
-//                        cell = x;
-//                    }
-//                }
-//                if(cell == 0)
-//                {
-//                    belief.setText("No Data Available, Please Scan First!");
-//                }
-//                else
-//                {
-//                    belief.setText("The initial belief is that you are in cell " + cell);
-//                    for(int x = 1; x < 19; x++)
-//                    {
-//                        predictions[x] = 0;
-//                    }
-//                }
             }
         });
 
@@ -217,10 +180,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     private void resetProbabilities() {
-//        for(int i=0; i<probabilities.length; i++){
-//            probabilities[i] = 1.0/18.0;
-//        }
         currSessionWifiData = new HashMap<>();
+        currSessionPredictions = new ArrayList<>();
     }
 
     class WifiReceiver extends BroadcastReceiver {
@@ -231,30 +192,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 // Call getScanResults() to obtain the results
             List<ScanResult> results = wifiManager.getScanResults();
             ArrayList<WifiReading> readings = new ArrayList<>();
-            //Toast.makeText(getBaseContext(), "received wifi", Toast.LENGTH_SHORT).show();
             try {
                 long time = System.nanoTime();
-                wifiDataT.setText("");
-                int percent = count * 10;
-                String str = "";
-                if(percent < 100) {
-                    str = "Scan In Progress: " + Integer.toString(percent) + "%";
-                }
-                else
-                {
-                    str = "Scan Completed, if you would like another scan press the Locate Me button";
-                }
-                //String temp = wifiDataT.getText().toString();
-                wifiDataT.setText(str);
                 for (int n = 0; n < results.size(); n++) {
 // SSID contains name of AP and level contains RSSI
 
                     try //Write values to the file
                     {
                         String string = time + ", " + ((TextView)findViewById(R.id.title)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).BSSID + ", " + results.get(n).level + "\n";
-                        //String temporary = wifiDataT.getText().toString();
-                        //Log.d("Wifi", string);
-                        //wifiDataT.setText(temporary + string);
                         wifiFileOSW.write(string);
                     }
                     catch (IOException e) {
@@ -265,46 +210,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
                 //Toast.makeText(getBaseContext(), "Scan Completed", Toast.LENGTH_SHORT).show();
                 int prediction = calculateCell(readings);
+                if(prediction != 0) {
+                    currSessionPredictions.add(prediction);
+                }
                 confMatrixFileOSW.write(prediction + "," + ((TextView) findViewById(R.id.title)).getText() + "\n");
-                //Toast.makeText(getBaseContext(), "You are in cell " + prediction, Toast.LENGTH_SHORT).show();
-                Toast.makeText(getBaseContext(), "Scan Completed, you are in cell " + prediction, Toast.LENGTH_SHORT).show();
-                prob.setText("You are in cell " + prediction);
-//                for(double i : probabilities) {
-//                    System.out.print(i + ", ");
-//                }
-//                System.out.println();
-//                predictions[prediction] = predictions[prediction] + 1;
                 Log.e("test", Integer.toString(count));
                 if(!stop) {
+                    prob.setText("You are in cell " + prediction);
+                    Toast.makeText(getBaseContext(), "Scan Completed, you are in cell " + prediction, Toast.LENGTH_SHORT).show();
                     System.out.println("going again");
                     wifiManager.startScan();
                 }
-
-//                if(count < 10)
-//                {
-//                    wifiManager.startScan();
-//                }
-//                else if(count == 10)
-//                {
-//                    int value = 0;
-//                    int cell = 0;
-//                    for(int x = 1; x < 19; x++)
-//                    {
-//                        if(predictions[x] > value)
-//                        {
-//                            value = predictions[x];
-//                            cell = x;
-//                        }
-//                    }
-//                    Toast.makeText(getBaseContext(), "Scan Completed, you are in cell" + prediction, Toast.LENGTH_SHORT).show();
-//                    //Toast.makeText(getBaseContext(), "You are in cell " + cell, Toast.LENGTH_SHORT).show();
-//                    prob.setText("You are in cell " + cell);
-//                    for(int x=1; x<19; x++)
-//                    {
-//                        predictions[x] = 0;
-//                    }
-//                    count = 0;
-//                }
             }
             catch (Exception e) { }
         }
