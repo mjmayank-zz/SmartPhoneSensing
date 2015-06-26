@@ -1,6 +1,5 @@
 package com.example.mjmayank.helloworld;
 
-import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -13,6 +12,7 @@ import android.hardware.SensorManager;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
@@ -21,11 +21,12 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.w3c.dom.Text;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -35,7 +36,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Scanner;
 import java.util.concurrent.Executors;
@@ -47,7 +47,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private SensorManager senSensorManager;
     private Sensor senAccelerometer;
     //TextView Xpoint, Ypoint, Zpoint;
-    TextView wifiDataT;
+    int still = 0;
+    int walking = 0;
+    int cont = 0;
+    float last_x = 0;
+    float last_y = 0;
+    float last_z = 0;
+    float curr_x = 0;
+    float curr_y = 0;
+    float curr_z = 0;
+    TextView wifiDataT, prob, belief, queueIt;
     int count = 0;
     OutputStreamWriter accelerometerFileOSW, calculatedValuesFileOSW, wifiFileOSW, confMatrixFileOSW;
     ArrayList<Double> xArr, yArr, zArr;
@@ -68,6 +77,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         int intervalGroupSize = 3;
+        prob = (TextView)findViewById(R.id.probability);
+        belief = (TextView) findViewById(R.id.initialBeliefText);
+        queueIt = (TextView) findViewById(R.id.queueStatus);
         xArr = new ArrayList<Double>();
         yArr = new ArrayList<Double>();
         zArr = new ArrayList<Double>();
@@ -137,6 +149,52 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 wifiManager.startScan();
             }
         });
+
+        Button reset = (Button) findViewById(R.id.initialBelief);
+        reset.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                int value = 0;
+                int cell = 0;
+                for(int x = 1; x < 19; x++)
+                {
+                    if(predictions[x] > value)
+                    {
+                        value = predictions[x];
+                        cell = x;
+                    }
+                }
+                if(cell == 0)
+                {
+                    belief.setText("No Data Available, Please Scan First!");
+                }
+                else
+                {
+                    belief.setText("The initial belief is that you are in cell " + cell);
+                    for(int x = 1; x < 19; x++)
+                    {
+                        predictions[x] = 0;
+                    }
+                }
+            }
+        });
+
+        CountDownTimer myCountDown = new CountDownTimer(10000, 10000) {
+            public void onTick(long millisUntilFinished) {
+                //update the UI with the new count
+            }
+
+            public void onFinish() {
+                if(cont == 0)
+                {
+                    queueIt.setText("In Queue");
+                }
+                if(cont == 1)
+                {
+                    queueIt.setText("Out of Queue: Moving Too Much");
+                }
+                //start the activity
+            }
+        };
 
 //        senSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE); //Sensor Management
 //        senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -272,7 +330,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         long time = System.nanoTime();
         try //Write values to the file
         {
-            accelerometerFileOSW.write(time + ", " + event.values[0] + ", " + event.values[1] + ", " + event.values[2] + "\n");
+            curr_x = event.values[0];
+            curr_y = event.values[1];
+            curr_z = event.values[2];
+            accelerometerFileOSW.write(time + ", " + curr_x + ", " + curr_y + ", " + curr_z + "\n");
+            //See how current values change with past ones to see if movement or not
+            if(curr_x > 0.1 && curr_y > 0.1 && curr_z > 0.1)
+            {
+                //moving
+
+            }
         }
         catch (IOException e) {
             Log.e("Writing Failure", "File 1 write failed: " + e.toString());
@@ -306,6 +373,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             zDiff = Math.abs(zMax - zMin);
             try
             {
+                //ONLY XYZ VALUES TO FILE
                 calculatedValuesFileOSW.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
                 Double[] dataPoint = {xSlope, ySlope, zSlope, xDiff, yDiff, zDiff};
 
@@ -451,19 +519,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 // Call getScanResults() to obtain the results
             List<ScanResult> results = wifiManager.getScanResults();
             ArrayList<WifiReading> readings = new ArrayList<>();
-            Toast.makeText(getBaseContext(), "received wifi", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(getBaseContext(), "received wifi", Toast.LENGTH_SHORT).show();
             try {
                 long time = System.nanoTime();
                 wifiDataT.setText("");
-                String str = Integer.toString(count);
-                String temp = wifiDataT.getText().toString();
-                wifiDataT.setText(temp+str);
+                int percent = count * 10;
+                String str = "";
+                if(percent < 100) {
+                    str = "Scan In Progress: " + Integer.toString(percent) + "%";
+                }
+                else
+                {
+                    str = "Scan Completed, if you would like another scan press the Locate Me button";
+                }
+                //String temp = wifiDataT.getText().toString();
+                wifiDataT.setText(str);
                 for (int n = 0; n < results.size(); n++) {
 // SSID contains name of AP and level contains RSSI
 
                     try //Write values to the file
                     {
-                        String string = time + ", " + ((TextView)findViewById(R.id.cellText)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).BSSID + ", " + results.get(n).level + "\n";
+                        String string = time + ", " + ((TextView)findViewById(R.id.title)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).BSSID + ", " + results.get(n).level + "\n";
                         //String temporary = wifiDataT.getText().toString();
                         //Log.d("Wifi", string);
                         //wifiDataT.setText(temporary + string);
@@ -475,9 +551,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                     readings.add(new WifiReading(results.get(n).BSSID, results.get(n).level));
                 }
-                Toast.makeText(getBaseContext(), "Scan Completed", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getBaseContext(), "Scan Completed", Toast.LENGTH_SHORT).show();
                 int prediction = calculateCell(readings);
-                confMatrixFileOSW.write(prediction + "," + ((TextView)findViewById(R.id.cellText)).getText());
+                confMatrixFileOSW.write(prediction + "," + ((TextView)findViewById(R.id.title)).getText());
                 //Toast.makeText(getBaseContext(), "You are in cell " + prediction, Toast.LENGTH_SHORT).show();
                 predictions[prediction] = predictions[prediction] + 1;
                 Log.e("test", Integer.toString(count));
@@ -497,7 +573,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                             cell = x;
                         }
                     }
-                    Toast.makeText(getBaseContext(), "You are in cell " + cell, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getBaseContext(), "Scan Completed, you are in cell" + cell, Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(getBaseContext(), "You are in cell " + cell, Toast.LENGTH_SHORT).show();
+                    prob.setText("You are in cell " + cell);
                     for(int x=1; x<19; x++)
                     {
                         predictions[x] = 0;
