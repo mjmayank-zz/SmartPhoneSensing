@@ -168,9 +168,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         };
 
-//        senSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE); //Sensor Management
-//        senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-//        senSensorManager.registerListener(this, senAccelerometer , SensorManager.SENSOR_DELAY_NORMAL);
+        senSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE); //Sensor Management
+        senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        senSensorManager.registerListener(this, senAccelerometer , SensorManager.SENSOR_DELAY_NORMAL);
 
 //        Xpoint = (TextView) findViewById(R.id.xCoord); //Change values of textViews
 //        Ypoint = (TextView) findViewById(R.id.yCoord);
@@ -188,7 +188,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // An access point scan has completed and results are sent here
         public void onReceive(Context c, Intent intent) {
             count++;
-            Log.e("test", Integer.toString(count));
+            //Log.e("test", Integer.toString(count));
 // Call getScanResults() to obtain the results
             List<ScanResult> results = wifiManager.getScanResults();
             ArrayList<WifiReading> readings = new ArrayList<>();
@@ -329,38 +329,69 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Log.e("Writing Failure", "File 1 write failed: " + e.toString());
         }
 
-//        System.out.println(event.values[1]);
-//
-//        xArr.add((double)event.values[0]);
-//        yArr.add((double)event.values[1]);
-//        zArr.add((double)event.values[2]);
-//        timeArr.add(time);
+//       System.out.println(event.values[1]);
 
-        List<Double> xTemp = xArr.subList(counter - k, counter);
-        List<Double> yTemp = yArr.subList(counter-k, counter);
-        List<Double> zTemp = zArr.subList(counter-k, counter);
-        List<Long> timeTemp = timeArr.subList(counter-k, counter);
+        xArr.add((double)event.values[0]);
+        yArr.add((double)event.values[1]);
+        zArr.add((double)event.values[2]);
+        timeArr.add(time);
 
-        if (counter >= 2) //if we have at least 3 lines to analyze to new file
+
+
+        if (counter >= k) //if we have at least 3 lines to analyze to new file
         {
-            xSlope = (xTemp.get(k-1) - xTemp.get(0))/(timeTemp.get(k-1) - timeTemp.get(0)); //calculate everything
-            ySlope = (yTemp.get(k-1) - yTemp.get(0))/(timeTemp.get(k-1) - timeTemp.get(0));
-            zSlope = (zTemp.get(k-1) - zTemp.get(0))/(timeTemp.get(k-1) - timeTemp.get(0));
+            List<Double> xTemp = new ArrayList<Double>();
+            List<Double> yTemp = new ArrayList<Double>();
+            List<Double> zTemp = new ArrayList<Double>();
+            List<Long> timeTemp = new ArrayList<Long>();
+
+            //Log.e("counter - 1", String.valueOf(counter-1));
+            //Log.e("counter - k", String.valueOf(counter-k));
+            Log.e("here", "2");
+
+            xTemp = xArr.subList(counter - k, counter-1);
+            Log.e("here", "2.x");
+            yTemp = yArr.subList(counter-k, counter-1);
+            Log.e("here", "2.y");
+            zTemp = zArr.subList(counter-k, counter-1);
+            Log.e("here", "2.z");
+            timeTemp = timeArr.subList(counter-k, counter-1);
+
+            Log.e("here", "3");
+
+            //Log.e("here", String.valueOf(timeTemp.get(k-1)-timeTemp.get(0)));
+            Log.e("here", "before");
+            //if(timeTemp.get(k-1) == 0)
+            //{
+              //  Log.e("here", String.valueOf(0));
+            //}
+            Log.e("here", "after");
+            //Log.e("here", String.valueOf(timeTemp.get(0)));
+            xSlope = (xArr.get(counter-1) - xArr.get(counter - k))/(timeArr.get(counter-1) - timeArr.get(counter-k)); //calculate everything
+            ySlope = (yArr.get(counter-1) - yArr.get(counter-k))/(timeArr.get(counter-1) - timeArr.get(counter-k));
+            zSlope = (zArr.get(counter-1) - zArr.get(counter-k))/(timeArr.get(counter-1) - timeArr.get(counter-k));
+
+            Log.e("here", "4");
             xMax = Collections.max(xTemp);
+            Log.e("value", String.valueOf(xMax));
             yMax = Collections.max(yTemp);
             zMax = Collections.max(zTemp);
             xMin = Collections.min(xTemp);
             yMin = Collections.min(yTemp);
             zMin = Collections.min(zTemp);
+            Log.e("here", "5");
             xDiff = Math.abs(xMax - xMin);
             yDiff = Math.abs(yMax - yMin);
             zDiff = Math.abs(zMax - zMin);
+            Log.e("here", "6");
             try
             {
                 //ONLY XYZ VALUES TO FILE
                 calculatedValuesFileOSW.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
+                Log.e("here", "7");
                 Double[] dataPoint = {xSlope, ySlope, zSlope, xDiff, yDiff, zDiff};
-
+                Log.e("here", "8");
+/*
                 boolean walking = compareToQueueData(dataPoint, 3);
 //                Log.d(TAG, Arrays.toString(queue));
                 if(walking){
@@ -371,6 +402,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     //majority value is 0
                     Toast.makeText(getBaseContext(), "Standing Still", Toast.LENGTH_SHORT).show();
                 }
+                */
             }
             catch (IOException e) {
                 Log.e("Writing Failure", "File 2 write failed: " + e.toString());
