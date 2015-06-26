@@ -63,7 +63,7 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Initial Belief"
+        android:text="Reset Belief"
         android:id="@+id/initialBelief"
         android:layout_below="@+id/rand2"
         android:layout_alignParentLeft="true"

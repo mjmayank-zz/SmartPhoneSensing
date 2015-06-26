@@ -64,14 +64,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     int counter = 0;
     ArrayList<Double[]> trainedData;
     ArrayList<double[]> numWifiData;
-    HashMap<String, List<Integer>> wifiData;
     WifiManager wifiManager;
     WifiReceiver wifiReceiver;
     private static final ScheduledExecutorService worker =
             Executors.newSingleThreadScheduledExecutor();
     private static final int NUM_CELLS = 19;
     HashMap<String, double[][]> globalTrainedWifiData;
+    HashMap<String, ArrayList<Integer>> currSessionWifiData;
     Integer[] predictions = new Integer[20];
+    boolean stop;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,9 +86,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         yArr = new ArrayList<Double>();
         zArr = new ArrayList<Double>();
         timeArr = new ArrayList<Long>();
-        for(int pos = 0; pos < 20; pos++){
-            predictions[pos] = 0;
-        }
+
+//        probabilities = new double[19];
+        resetProbabilities();
 
         try {
             File firstFile = new File("/sdcard/accelerometerData" + System.nanoTime() + ".txt");
@@ -144,6 +145,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Button wifi = (Button) findViewById(R.id.locateMe);
         wifi.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                stop = false;
                 System.out.println("Scanning");
                 Toast.makeText(getBaseContext(), "Scanning wifi", Toast.LENGTH_SHORT).show();
                 wifiManager.startScan();
@@ -153,28 +155,35 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Button reset = (Button) findViewById(R.id.initialBelief);
         reset.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                int value = 0;
-                int cell = 0;
-                for(int x = 1; x < 19; x++)
-                {
-                    if(predictions[x] > value)
-                    {
-                        value = predictions[x];
-                        cell = x;
-                    }
-                }
-                if(cell == 0)
-                {
-                    belief.setText("No Data Available, Please Scan First!");
-                }
-                else
-                {
-                    belief.setText("The initial belief is that you are in cell " + cell);
-                    for(int x = 1; x < 19; x++)
-                    {
-                        predictions[x] = 0;
-                    }
-                }
+                stop = true;
+                resetProbabilities();
+//                for(int x = 1; x < 19; x++)
+//                {
+//                    predictions[x] = 0;
+//                }
+//
+//                int value = 0;
+//                int cell = 0;
+//                for(int x = 1; x < 19; x++)
+//                {
+//                    if(predictions[x] > value)
+//                    {
+//                        value = predictions[x];
+//                        cell = x;
+//                    }
+//                }
+//                if(cell == 0)
+//                {
+//                    belief.setText("No Data Available, Please Scan First!");
+//                }
+//                else
+//                {
+//                    belief.setText("The initial belief is that you are in cell " + cell);
+//                    for(int x = 1; x < 19; x++)
+//                    {
+//                        predictions[x] = 0;
+//                    }
+//                }
             }
         });
 
@@ -207,141 +216,151 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
-    protected ArrayList<double[]> readNumWifiData(){
-        Scanner input = null;
-        ArrayList<double[]> map = new ArrayList<>();
-
-        try
-        {
-            Context context = this;
-            AssetManager am = getAssets();
-            InputStream inputStream = am.open("numWifiData.txt");
-//            Log.e("test", "test");
-//            InputStream inputStream = openFileInput(fileName); //input stream
-            if (inputStream != null) //make sure the file isn't empty
-            {
-                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-                String receiveString = "";
-                StringBuilder stringBuilder = new StringBuilder();
-                while ((receiveString = bufferedReader.readLine())!= null) //go line by line
-                {
-                    String[] parse = receiveString.split(",");
-                    double[] probs = new double[parse.length];
-                    for(int i=0; i<parse.length; i++){
-                        probs[i] = Double.parseDouble(parse[i]);
-                        System.out.println(probs[i]);
-                    }
-                    map.add(probs);
-                }
-                inputStream.close();
-            }
-        }
-        catch (FileNotFoundException e)
-        {
-            Log.e("Reading Failure", "File not found: " + e.toString());
-        }
-        catch (IOException e)
-        {
-            Log.e("Reading Failure", "Can not read file: " + e.toString());
-        }
-        System.out.println(map);
-        return map;
+    private void resetProbabilities() {
+//        for(int i=0; i<probabilities.length; i++){
+//            probabilities[i] = 1.0/18.0;
+//        }
+        currSessionWifiData = new HashMap<>();
     }
 
-    protected HashMap<String, double[][]> readWifiData()
-    {
-        Scanner input = null;
-        HashMap<String, double[][]> map = new HashMap<String, double[][]>();
-
-        try
-        {
-            Context context = this;
-            AssetManager am = getAssets();
-            InputStream inputStream = am.open("wifiData.txt");
-//            Log.e("test", "test");
-//            InputStream inputStream = openFileInput(fileName); //input stream
-            if (inputStream != null) //make sure the file isn't empty
-            {
-                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-                String receiveString = "";
-                StringBuilder stringBuilder = new StringBuilder();
-                while ((receiveString = bufferedReader.readLine())!= null) //go line by line
-                {
-                    String[] parse = receiveString.split(",");
-                    if(map.get(parse[0].trim()) == null) //If the mac address doesn't exist
-                    {
-                        double [][] info = new double[256][19];
-                        map.put(parse[0].trim(), info);
-                    }
-                    if(map.get(parse[0].trim()) != null) //If the mac address does exist
-                    {
-                        int cell = Integer.parseInt(parse[1].trim()); //for each cell put all values
-                        for(int value = 2; value < 258; value ++) {
-                            double[][] temp = map.get(parse[0].trim());
-                            double store = Double.parseDouble(parse[value].trim());
-                            temp[value - 2][cell] = store;
-                        }
-                    }
+    class WifiReceiver extends BroadcastReceiver {
+        // An access point scan has completed and results are sent here
+        public void onReceive(Context c, Intent intent) {
+            count++;
+            Log.e("test", Integer.toString(count));
+// Call getScanResults() to obtain the results
+            List<ScanResult> results = wifiManager.getScanResults();
+            ArrayList<WifiReading> readings = new ArrayList<>();
+            //Toast.makeText(getBaseContext(), "received wifi", Toast.LENGTH_SHORT).show();
+            try {
+                long time = System.nanoTime();
+                wifiDataT.setText("");
+                int percent = count * 10;
+                String str = "";
+                if(percent < 100) {
+                    str = "Scan In Progress: " + Integer.toString(percent) + "%";
                 }
-                inputStream.close();
+                else
+                {
+                    str = "Scan Completed, if you would like another scan press the Locate Me button";
+                }
+                //String temp = wifiDataT.getText().toString();
+                wifiDataT.setText(str);
+                for (int n = 0; n < results.size(); n++) {
+// SSID contains name of AP and level contains RSSI
+
+                    try //Write values to the file
+                    {
+                        String string = time + ", " + ((TextView)findViewById(R.id.title)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).BSSID + ", " + results.get(n).level + "\n";
+                        //String temporary = wifiDataT.getText().toString();
+                        //Log.d("Wifi", string);
+                        //wifiDataT.setText(temporary + string);
+                        wifiFileOSW.write(string);
+                    }
+                    catch (IOException e) {
+                        Log.e("Writing Failure", "File 1 write failed: " + e.toString());
+                    }
+
+                    readings.add(new WifiReading(results.get(n).BSSID, results.get(n).level));
+                }
+                //Toast.makeText(getBaseContext(), "Scan Completed", Toast.LENGTH_SHORT).show();
+                int prediction = calculateCell(readings);
+                confMatrixFileOSW.write(prediction + "," + ((TextView) findViewById(R.id.title)).getText() + "\n");
+                //Toast.makeText(getBaseContext(), "You are in cell " + prediction, Toast.LENGTH_SHORT).show();
+                Toast.makeText(getBaseContext(), "Scan Completed, you are in cell " + prediction, Toast.LENGTH_SHORT).show();
+                prob.setText("You are in cell " + prediction);
+//                for(double i : probabilities) {
+//                    System.out.print(i + ", ");
+//                }
+//                System.out.println();
+//                predictions[prediction] = predictions[prediction] + 1;
+                Log.e("test", Integer.toString(count));
+                if(!stop) {
+                    System.out.println("going again");
+                    wifiManager.startScan();
+                }
+
+//                if(count < 10)
+//                {
+//                    wifiManager.startScan();
+//                }
+//                else if(count == 10)
+//                {
+//                    int value = 0;
+//                    int cell = 0;
+//                    for(int x = 1; x < 19; x++)
+//                    {
+//                        if(predictions[x] > value)
+//                        {
+//                            value = predictions[x];
+//                            cell = x;
+//                        }
+//                    }
+//                    Toast.makeText(getBaseContext(), "Scan Completed, you are in cell" + prediction, Toast.LENGTH_SHORT).show();
+//                    //Toast.makeText(getBaseContext(), "You are in cell " + cell, Toast.LENGTH_SHORT).show();
+//                    prob.setText("You are in cell " + cell);
+//                    for(int x=1; x<19; x++)
+//                    {
+//                        predictions[x] = 0;
+//                    }
+//                    count = 0;
+//                }
             }
+            catch (Exception e) { }
         }
-        catch (FileNotFoundException e)
-        {
-            Log.e("Reading Failure", "File not found: " + e.toString());
-        }
-        catch (IOException e)
-        {
-            Log.e("Reading Failure", "Can not read file: " + e.toString());
-        }
-        System.out.println(map);
-        return map;
-    }
+    } // End of class WifiReceiver
 
     protected int calculateCell(ArrayList<WifiReading> wifiReading){
         HashMap<String, double[][]> trainedWifiData = globalTrainedWifiData;
-        double[] probs = new double[19];
-        Arrays.fill(probs, 1.0 / 17.0);
         Collections.sort(wifiReading);
         int predicted_cell = 0;
         double max_prob = 0.0;
+        double[] probabilities = new double[19];
+        for(int i=0; i<probabilities.length; i++){
+            probabilities[i] = 1.0/18.0;
+        }
 
         for(int i=10; i>0; i--){
             int num_wifis = wifiReading.size();
             if(i>=wifiReading.size()){
                 i = wifiReading.size()-1;
                 for(int j=0; j<19; j++){
-                    probs[j] *= numWifiData.get(j)[num_wifis];
+                    probabilities[j] *= numWifiData.get(j)[num_wifis];
                 }
                 continue;
             }
-            System.out.println(wifiReading.get(i));
-            if(trainedWifiData.get(wifiReading.get(i).mac) != null){
-                System.out.println("Found MAC");
-                double[][] mac_data = trainedWifiData.get(wifiReading.get(i).mac);
+            String mac = wifiReading.get(i).mac;
+            if(trainedWifiData.get(mac) != null){
+                if(currSessionWifiData.get(mac) == null){
+                    ArrayList<Integer> array = new ArrayList<>();
+                    array.add(wifiReading.get(i).strength);
+                    currSessionWifiData.put(mac, array);
+                }
+                int average = 0;
+                ArrayList<Integer> array = currSessionWifiData.get(mac);
+                for(int val : array){
+                    average += val;
+                }
+                average = average/array.size();
+
+                double[][] mac_data = trainedWifiData.get(mac);
                 for(int cell=0; cell<NUM_CELLS; cell++){
-                    System.out.println(probs[cell]);
-                    System.out.println(wifiReading.get(i).strength);
-                    System.out.println(mac_data[wifiReading.get(i).strength][cell]);
-                    probs[cell] = probs[cell] * mac_data[wifiReading.get(i).strength][cell];
-                    System.out.println(probs[cell]);
+                    probabilities[cell] = probabilities[cell] * mac_data[average][cell];
                 }
                 double sum = 0.0;
-                for(double j : probs){
+                for(double j : probabilities){
                     sum += j;
                 }
                 System.out.println("calculated sum: " + sum);
-                for(int j=0; j<probs.length; j++){
-                    probs[j] += .000000001;
-                    probs[j] /= sum + (.000000001 * 19);
-                    if(probs[j] > .8){
+                for(int j=0; j<probabilities.length; j++){
+                    probabilities[j] += .000000001;
+                    probabilities[j] /= sum + (.000000001 * 19);
+                    if(probabilities[j] > .8){
                         System.out.println("over 80%");
                         return j;
                     }
-                    if(probs[j] > max_prob){
-                        max_prob = probs[j];
+                    if(probabilities[j] > max_prob){
+                        max_prob = probabilities[j];
                         predicted_cell = j;
                     }
                 }
@@ -353,12 +372,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return predicted_cell;
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
+    /*
+    *
+    *
+    *
+    *
+    *
+    END OF WIFI READING CODE - BEGINNING OF QUEUE CODE
+    *
+    *
+    *
+    *
+    *
+    */
 
     @Override
     public void onSensorChanged(SensorEvent event)
@@ -468,6 +494,141 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //        senSensorManager.unregisterListener(this);
     }
 
+    protected boolean compareToQueueData(Double[] point, int k){
+//        double [][] trainingData = new double[10][10];
+        PriorityQueue<DataPoint> nearestNeighbors = new PriorityQueue<DataPoint>();
+        for(Double[] data : trainedData){
+            DataPoint dpoint = new DataPoint(data, point);
+            nearestNeighbors.add(dpoint);
+        }
+
+        int numVal = 0;
+        for(int i = 0; i<k; i++){
+            numVal += nearestNeighbors.poll().value;
+        }
+        return numVal > k/2.0;
+    }
+
+    protected void onResume() { //Restart the logging, adding more sensor data to the file
+        super.onResume();
+//        senSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+
+    }
+
+    protected void onFinish() { //Finish logging and display all the data you logged
+        try
+        {
+            accelerometerFileOSW.close();
+            calculatedValuesFileOSW.close();
+            wifiFileOSW.close();
+            confMatrixFileOSW.close();
+            //Log.d("First File", readFile("firstFile.txt"));
+            //Log.d("Second FIle", readFile("secondFile.txt"));
+        } catch (IOException e)
+        {
+            Log.e("Closing Failure", "Can't Close: " + e.toString());
+        }
+//        senSensorManager.unregisterListener(this);
+    }
+
+    protected void onStop(){
+        super.onStop();
+        unregisterReceiver(wifiReceiver);
+    }
+
+    protected ArrayList<double[]> readNumWifiData(){
+        Scanner input = null;
+        ArrayList<double[]> map = new ArrayList<>();
+
+        try
+        {
+            Context context = this;
+            AssetManager am = getAssets();
+            InputStream inputStream = am.open("numWifiData.txt");
+//            Log.e("test", "test");
+//            InputStream inputStream = openFileInput(fileName); //input stream
+            if (inputStream != null) //make sure the file isn't empty
+            {
+                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                String receiveString = "";
+                StringBuilder stringBuilder = new StringBuilder();
+                while ((receiveString = bufferedReader.readLine())!= null) //go line by line
+                {
+                    String[] parse = receiveString.split(",");
+                    double[] probs = new double[parse.length];
+                    for(int i=0; i<parse.length; i++){
+                        probs[i] = Double.parseDouble(parse[i]);
+                        System.out.println(probs[i]);
+                    }
+                    map.add(probs);
+                }
+                inputStream.close();
+            }
+        }
+        catch (FileNotFoundException e)
+        {
+            Log.e("Reading Failure", "File not found: " + e.toString());
+        }
+        catch (IOException e)
+        {
+            Log.e("Reading Failure", "Can not read file: " + e.toString());
+        }
+        System.out.println(map);
+        return map;
+    }
+
+    protected HashMap<String, double[][]> readWifiData()
+    {
+        Scanner input = null;
+        HashMap<String, double[][]> map = new HashMap<String, double[][]>();
+
+        try
+        {
+            Context context = this;
+            AssetManager am = getAssets();
+            InputStream inputStream = am.open("wifiData.txt");
+//            Log.e("test", "test");
+//            InputStream inputStream = openFileInput(fileName); //input stream
+            if (inputStream != null) //make sure the file isn't empty
+            {
+                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                String receiveString = "";
+                StringBuilder stringBuilder = new StringBuilder();
+                while ((receiveString = bufferedReader.readLine())!= null) //go line by line
+                {
+                    String[] parse = receiveString.split(",");
+                    if(map.get(parse[0].trim()) == null) //If the mac address doesn't exist
+                    {
+                        double [][] info = new double[256][19];
+                        map.put(parse[0].trim(), info);
+                    }
+                    if(map.get(parse[0].trim()) != null) //If the mac address does exist
+                    {
+                        int cell = Integer.parseInt(parse[1].trim()); //for each cell put all values
+                        for(int value = 2; value < 258; value ++) {
+                            double[][] temp = map.get(parse[0].trim());
+                            double store = Double.parseDouble(parse[value].trim());
+                            temp[value - 2][cell] = store;
+                        }
+                    }
+                }
+                inputStream.close();
+            }
+        }
+        catch (FileNotFoundException e)
+        {
+            Log.e("Reading Failure", "File not found: " + e.toString());
+        }
+        catch (IOException e)
+        {
+            Log.e("Reading Failure", "Can not read file: " + e.toString());
+        }
+        System.out.println(map);
+        return map;
+    }
+
     private ArrayList<Double[]> readQueueData(String fileName) {
         String ret = ""; //start with blank file
         ArrayList<Double[]> finalData = new ArrayList<Double[]>();
@@ -511,123 +672,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return finalData;
     }
 
-    protected boolean compareToQueueData(Double[] point, int k){
-//        double [][] trainingData = new double[10][10];
-        PriorityQueue<DataPoint> nearestNeighbors = new PriorityQueue<DataPoint>();
-        for(Double[] data : trainedData){
-            DataPoint dpoint = new DataPoint(data, point);
-            nearestNeighbors.add(dpoint);
-        }
 
-        int numVal = 0;
-        for(int i = 0; i<k; i++){
-            numVal += nearestNeighbors.poll().value;
-        }
-        return numVal > k/2.0;
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
     }
 
-    protected void onResume() { //Restart the logging, adding more sensor data to the file
-        super.onResume();
-//        senSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
-
-    }
-
-    protected void onFinish() { //Finish logging and display all the data you logged
-        try
-        {
-            accelerometerFileOSW.close();
-            calculatedValuesFileOSW.close();
-            wifiFileOSW.close();
-            confMatrixFileOSW.close();
-            //Log.d("First File", readFile("firstFile.txt"));
-            //Log.d("Second FIle", readFile("secondFile.txt"));
-        } catch (IOException e)
-        {
-            Log.e("Closing Failure", "Can't Close: " + e.toString());
-        }
-//        senSensorManager.unregisterListener(this);
-    }
-
-    protected void onStop(){
-        super.onStop();
-        unregisterReceiver(wifiReceiver);
-    }
-
-    class WifiReceiver extends BroadcastReceiver {
-        // An access point scan has completed and results are sent here
-        public void onReceive(Context c, Intent intent) {
-            count++;
-            Log.e("test", Integer.toString(count));
-// Call getScanResults() to obtain the results
-            List<ScanResult> results = wifiManager.getScanResults();
-            ArrayList<WifiReading> readings = new ArrayList<>();
-            //Toast.makeText(getBaseContext(), "received wifi", Toast.LENGTH_SHORT).show();
-            try {
-                long time = System.nanoTime();
-                wifiDataT.setText("");
-                int percent = count * 10;
-                String str = "";
-                if(percent < 100) {
-                    str = "Scan In Progress: " + Integer.toString(percent) + "%";
-                }
-                else
-                {
-                    str = "Scan Completed, if you would like another scan press the Locate Me button";
-                }
-                //String temp = wifiDataT.getText().toString();
-                wifiDataT.setText(str);
-                for (int n = 0; n < results.size(); n++) {
-// SSID contains name of AP and level contains RSSI
-
-                    try //Write values to the file
-                    {
-                        String string = time + ", " + ((TextView)findViewById(R.id.title)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).BSSID + ", " + results.get(n).level + "\n";
-                        //String temporary = wifiDataT.getText().toString();
-                        //Log.d("Wifi", string);
-                        //wifiDataT.setText(temporary + string);
-                        wifiFileOSW.write(string);
-                    }
-                    catch (IOException e) {
-                        Log.e("Writing Failure", "File 1 write failed: " + e.toString());
-                    }
-
-                    readings.add(new WifiReading(results.get(n).BSSID, results.get(n).level));
-                }
-                //Toast.makeText(getBaseContext(), "Scan Completed", Toast.LENGTH_SHORT).show();
-                int prediction = calculateCell(readings);
-                confMatrixFileOSW.write(prediction + "," + ((TextView)findViewById(R.id.title)).getText());
-                //Toast.makeText(getBaseContext(), "You are in cell " + prediction, Toast.LENGTH_SHORT).show();
-                predictions[prediction] = predictions[prediction] + 1;
-                Log.e("test", Integer.toString(count));
-                if(count < 10)
-                {
-                    wifiManager.startScan();
-                }
-                else if(count == 10)
-                {
-                    int value = 0;
-                    int cell = 0;
-                    for(int x = 1; x < 19; x++)
-                    {
-                        if(predictions[x] > value)
-                        {
-                            value = predictions[x];
-                            cell = x;
-                        }
-                    }
-                    Toast.makeText(getBaseContext(), "Scan Completed, you are in cell" + cell, Toast.LENGTH_SHORT).show();
-                    //Toast.makeText(getBaseContext(), "You are in cell " + cell, Toast.LENGTH_SHORT).show();
-                    prob.setText("You are in cell " + cell);
-                    for(int x=1; x<19; x++)
-                    {
-                        predictions[x] = 0;
-                    }
-                    count = 0;
-                }
-            }
-            catch (Exception e) { }
-        }
-    } // End of class WifiReceiver
 }
 
 
