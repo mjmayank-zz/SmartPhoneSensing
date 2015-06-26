@@ -71,7 +71,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final int NUM_CELLS = 19;
     HashMap<String, double[][]> globalTrainedWifiData;
     HashMap<String, ArrayList<Integer>> currSessionWifiData;
-    ArrayList<Integer> currSessionPredictions;
+    int[] currSessionPredictions;
     Integer[] predictions = new Integer[20];
     boolean stop;
 
@@ -181,7 +181,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private void resetProbabilities() {
         currSessionWifiData = new HashMap<>();
-        currSessionPredictions = new ArrayList<>();
+        currSessionPredictions = new int[19];
+        Arrays.fill(currSessionPredictions, 0);
     }
 
     class WifiReceiver extends BroadcastReceiver {
@@ -211,12 +212,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 //Toast.makeText(getBaseContext(), "Scan Completed", Toast.LENGTH_SHORT).show();
                 int prediction = calculateCell(readings);
                 if(prediction != 0) {
-                    currSessionPredictions.add(prediction);
+                    currSessionPredictions[prediction]++;
                 }
                 confMatrixFileOSW.write(prediction + "," + ((TextView) findViewById(R.id.title)).getText() + "\n");
                 Log.e("test", Integer.toString(count));
                 if(!stop) {
-                    prob.setText("You are in cell " + prediction);
+                    if(calcMode() != 0) {
+                        prob.setText("You are in cell " + prediction);
+                    }
                     Toast.makeText(getBaseContext(), "Scan Completed, you are in cell " + prediction, Toast.LENGTH_SHORT).show();
                     System.out.println("going again");
                     wifiManager.startScan();
@@ -286,6 +289,31 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         }
         return predicted_cell;
+    }
+
+    public int calcMode(){
+        int sum = 0;
+        int maxVal = 0;
+        int maxIndex = 0;
+        for(int i=0; i<currSessionPredictions.length;i++){
+            if(currSessionPredictions[i] > maxVal){
+                maxVal = currSessionPredictions[i];
+                maxIndex = i;
+            }
+            sum += currSessionPredictions[i];
+        }
+        if(sum < 2){
+            return 0;
+        }
+        else if(sum == 2){
+            if(maxVal == 2){
+                return maxIndex;
+            }
+            return 0;
+        }
+        else{
+            return maxIndex;
+        }
     }
 
     /*
@@ -470,8 +498,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             calculatedValuesFileOSW.close();
             wifiFileOSW.close();
             confMatrixFileOSW.close();
-            //Log.d("First File", readFile("firstFile.txt"));
-            //Log.d("Second FIle", readFile("secondFile.txt"));
         } catch (IOException e)
         {
             Log.e("Closing Failure", "Can't Close: " + e.toString());
