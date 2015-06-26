@@ -63,6 +63,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     ArrayList<Long> timeArr;
     int counter = 0;
     ArrayList<Double[]> trainedData;
+    ArrayList<double[]> numWifiData;
     HashMap<String, List<Integer>> wifiData;
     WifiManager wifiManager;
     WifiReceiver wifiReceiver;
@@ -84,11 +85,33 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         yArr = new ArrayList<Double>();
         zArr = new ArrayList<Double>();
         timeArr = new ArrayList<Long>();
-        for(int pos = 0; pos < 20; pos++)
-        {
+        for(int pos = 0; pos < 20; pos++){
             predictions[pos] = 0;
         }
 
+        try {
+            File firstFile = new File("/sdcard/accelerometerData" + System.nanoTime() + ".txt");
+            firstFile.createNewFile();
+            FileOutputStream fOutOne = new FileOutputStream(firstFile);
+            accelerometerFileOSW = new OutputStreamWriter(fOutOne);
+
+            File calculatedValuesFile = new File("/sdcard/calculatedValuesFile" + System.nanoTime() + ".txt");
+            calculatedValuesFile.createNewFile();
+            FileOutputStream fOutTwo = new FileOutputStream(calculatedValuesFile);
+            calculatedValuesFileOSW = new OutputStreamWriter(fOutTwo);
+
+            File wifiFile = new File("/sdcard/wifiFile" + System.nanoTime() + ".txt");
+            wifiFile.createNewFile();
+            FileOutputStream fOutWifi = new FileOutputStream(wifiFile);
+            wifiFileOSW = new OutputStreamWriter(fOutWifi);
+
+            File matrixFile = new File("/sdcard/confMatrix" + System.nanoTime() + ".txt");
+            matrixFile.createNewFile();
+            FileOutputStream fOutMatrix = new FileOutputStream(matrixFile);
+            confMatrixFileOSW = new OutputStreamWriter(fOutMatrix);
+        } catch (Exception e) {
+            Toast.makeText(getBaseContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
 
 /*
           try //create the file and open a stream writer to it
@@ -103,31 +126,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
           }
           */
 
-        try {
-            File firstFile = new File("/sdcard/firstFile.txt");
-            firstFile.createNewFile();
-            FileOutputStream fOutOne = new FileOutputStream(firstFile);
-            accelerometerFileOSW = new OutputStreamWriter(fOutOne);
-
-            File calculatedValuesFile = new File("/sdcard/calculatedValuesFile.txt");
-            calculatedValuesFile.createNewFile();
-            FileOutputStream fOutTwo = new FileOutputStream(calculatedValuesFile);
-            calculatedValuesFileOSW = new OutputStreamWriter(fOutTwo);
-
-            File wifiFile = new File("/sdcard/wifiFile.txt");
-            wifiFile.createNewFile();
-            FileOutputStream fOutWifi = new FileOutputStream(wifiFile);
-            wifiFileOSW = new OutputStreamWriter(fOutWifi);
-
-            File matrixFile = new File("/sdcard/confMatrix.txt");
-            matrixFile.createNewFile();
-            FileOutputStream fOutMatrix = new FileOutputStream(matrixFile);
-            confMatrixFileOSW = new OutputStreamWriter(fOutMatrix);
-        } catch (Exception e) {
-            Toast.makeText(getBaseContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-
         globalTrainedWifiData = readWifiData();
+        numWifiData = readNumWifiData();
 
         wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         if (wifiManager.isWifiEnabled() == false) {
@@ -207,6 +207,48 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
+    protected ArrayList<double[]> readNumWifiData(){
+        Scanner input = null;
+        ArrayList<double[]> map = new ArrayList<>();
+
+        try
+        {
+            Context context = this;
+            AssetManager am = getAssets();
+            InputStream inputStream = am.open("numWifiData.txt");
+//            Log.e("test", "test");
+//            InputStream inputStream = openFileInput(fileName); //input stream
+            if (inputStream != null) //make sure the file isn't empty
+            {
+                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                String receiveString = "";
+                StringBuilder stringBuilder = new StringBuilder();
+                while ((receiveString = bufferedReader.readLine())!= null) //go line by line
+                {
+                    String[] parse = receiveString.split(",");
+                    double[] probs = new double[parse.length];
+                    for(int i=0; i<parse.length; i++){
+                        probs[i] = Double.parseDouble(parse[i]);
+                        System.out.println(probs[i]);
+                    }
+                    map.add(probs);
+                }
+                inputStream.close();
+            }
+        }
+        catch (FileNotFoundException e)
+        {
+            Log.e("Reading Failure", "File not found: " + e.toString());
+        }
+        catch (IOException e)
+        {
+            Log.e("Reading Failure", "Can not read file: " + e.toString());
+        }
+        System.out.println(map);
+        return map;
+    }
+
     protected HashMap<String, double[][]> readWifiData()
     {
         Scanner input = null;
@@ -267,12 +309,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         double max_prob = 0.0;
 
         for(int i=10; i>0; i--){
-//            int num_wifis = wifiReading.size();
+            int num_wifis = wifiReading.size();
             if(i>=wifiReading.size()){
                 i = wifiReading.size()-1;
-//                for(int j=0; j<19; j++){
-//                    probs[j] *= times_dict[j][num_wifis];
-//                }
+                for(int j=0; j<19; j++){
+                    probs[j] *= numWifiData.get(j)[num_wifis];
+                }
                 continue;
             }
             System.out.println(wifiReading.get(i));
