@@ -133,6 +133,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Button wifi = (Button) findViewById(R.id.locateMe);
         wifi.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                prob.setText("Locating you...");
                 stop = false;
                 resetProbabilities();
                 wifiDataT.setText("Scanning");
@@ -215,10 +216,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     currSessionPredictions[prediction]++;
                 }
                 confMatrixFileOSW.write(prediction + "," + ((TextView) findViewById(R.id.title)).getText() + "\n");
-                Log.e("test", Integer.toString(count));
                 if(!stop) {
-                    if(calcMode() != 0) {
-                        prob.setText("You are in cell " + prediction);
+                    int total_pred = calcMode();
+                    if(total_pred != 0) {
+                        prob.setText("You are in cell " + total_pred);
                     }
                     Toast.makeText(getBaseContext(), "Scan Completed, you are in cell " + prediction, Toast.LENGTH_SHORT).show();
                     System.out.println("going again");

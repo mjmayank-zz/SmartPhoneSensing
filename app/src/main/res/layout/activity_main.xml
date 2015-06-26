@@ -22,18 +22,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Please Press Initial Belief"
-        android:id="@+id/initialBeliefText"
-        android:layout_below="@+id/title"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
         android:text="Please Press Locate Me"
         android:id="@+id/probability"
         android:layout_below="@+id/random"
@@ -44,11 +32,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/random"
-        android:layout_below="@+id/initialBeliefText"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
-        android:layout_alignRight="@+id/initialBeliefText"
-        android:layout_alignEnd="@+id/initialBeliefText" />
+        android:layout_below="@+id/title" />
 
     <TextView
         android:layout_width="wrap_content"
