@@ -376,50 +376,29 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             //Log.e("counter - 1", String.valueOf(counter-1));
             //Log.e("counter - k", String.valueOf(counter-k));
-            Log.e("here", "2");
 
             xTemp = xArr.subList(counter - k, counter-1);
-            Log.e("here", "2.x");
             yTemp = yArr.subList(counter-k, counter-1);
-            Log.e("here", "2.y");
             zTemp = zArr.subList(counter-k, counter-1);
-            Log.e("here", "2.z");
-            timeTemp = timeArr.subList(counter-k, counter-1);
 
-            Log.e("here", "3");
-
-            //Log.e("here", String.valueOf(timeTemp.get(k-1)-timeTemp.get(0)));
-            Log.e("here", "before");
-            //if(timeTemp.get(k-1) == 0)
-            //{
-              //  Log.e("here", String.valueOf(0));
-            //}
-            Log.e("here", "after");
-            //Log.e("here", String.valueOf(timeTemp.get(0)));
             xSlope = (xArr.get(counter-1) - xArr.get(counter - k))/(timeArr.get(counter-1) - timeArr.get(counter-k)); //calculate everything
             ySlope = (yArr.get(counter-1) - yArr.get(counter-k))/(timeArr.get(counter-1) - timeArr.get(counter-k));
             zSlope = (zArr.get(counter-1) - zArr.get(counter-k))/(timeArr.get(counter-1) - timeArr.get(counter-k));
 
-            Log.e("here", "4");
             xMax = Collections.max(xTemp);
-            Log.e("value", String.valueOf(xMax));
             yMax = Collections.max(yTemp);
             zMax = Collections.max(zTemp);
             xMin = Collections.min(xTemp);
             yMin = Collections.min(yTemp);
             zMin = Collections.min(zTemp);
-            Log.e("here", "5");
             xDiff = Math.abs(xMax - xMin);
             yDiff = Math.abs(yMax - yMin);
             zDiff = Math.abs(zMax - zMin);
-            Log.e("here", "6");
             try
             {
                 //ONLY XYZ VALUES TO FILE
                 calculatedValuesFileOSW.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
-                Log.e("here", "7");
                 Double[] dataPoint = {xSlope, ySlope, zSlope, xDiff, yDiff, zDiff};
-                Log.e("here", "8");
 /*
                 boolean walking = compareToQueueData(dataPoint, 3);
 //                Log.d(TAG, Arrays.toString(queue));
