@@ -136,7 +136,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 stop = false;
                 resetProbabilities();
                 wifiDataT.setText("Scanning");
-                Toast.makeText(getBaseContext(), "Scanning wifi", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getBaseContext(), "scanning", Toast.LENGTH_SHORT).show();
                 wifiManager.startScan();
             }
         });
@@ -200,7 +200,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                     try //Write values to the file
                     {
-                        String string = time + ", " + ((TextView)findViewById(R.id.title)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).BSSID + ", " + results.get(n).level + "\n";
+                        String string = time + ", " + ((TextView)findViewById(R.id.cellText)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).BSSID + ", " + results.get(n).level + "\n";
                         wifiFileOSW.write(string);
                     }
                     catch (IOException e) {
@@ -209,19 +209,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                     readings.add(new WifiReading(results.get(n).BSSID, results.get(n).level));
                 }
-                //Toast.makeText(getBaseContext(), "Scan Completed", Toast.LENGTH_SHORT).show();
                 int prediction = calculateCell(readings);
                 if(prediction != 0) {
                     currSessionPredictions[prediction]++;
                 }
-                confMatrixFileOSW.write(prediction + "," + ((TextView) findViewById(R.id.title)).getText() + "\n");
                 if(!stop) {
                     int total_pred = calcMode();
                     if(total_pred != 0) {
                         prob.setText("You are in cell " + total_pred);
+                        confMatrixFileOSW.write(total_pred + "," + ((TextView) findViewById(R.id.cellText)).getText() + "\n");
                     }
-                    Toast.makeText(getBaseContext(), "Scan Completed, you are in cell " + prediction, Toast.LENGTH_SHORT).show();
-                    System.out.println("going again");
+                    Toast.makeText(getBaseContext(), "Cell " + prediction, Toast.LENGTH_SHORT).show();
                     wifiManager.startScan();
                 }
             }
