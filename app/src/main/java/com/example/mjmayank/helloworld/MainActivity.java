@@ -385,7 +385,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //                calculatedValuesFileOSW.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
             if(trainedQueueData != null) {
                 Double[] dataPoint = {xSlope, ySlope, zSlope, xDiff, yDiff, zDiff};
-                boolean walking = compareToQueueData(dataPoint, 3);
+                lastQueue.pop();
+                lastQueue.push(compareToQueueData(dataPoint, 3));
+                Boolean[] array = (Boolean[]) lastQueue.toArray();
+                int count = 0;
+                for(Boolean bool : array){
+                    if(bool)
+                        count++;
+                }
+                boolean walking = count > array.length/2;
 //                Log.d(TAG, Arrays.toString(queue));
                 if (walking) {
                     //majority value is 1
