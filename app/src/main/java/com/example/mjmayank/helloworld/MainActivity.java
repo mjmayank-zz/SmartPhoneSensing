@@ -62,7 +62,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     ArrayList<Double> xArr, yArr, zArr;
     ArrayList<Long> timeArr;
     int counter = 0;
-    ArrayList<Double[]> trainedData;
+    ArrayList<Double[]> trainedQueueData;
     ArrayList<double[]> numWifiData;
     WifiManager wifiManager;
     WifiReceiver wifiReceiver;
@@ -116,6 +116,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         globalTrainedWifiData = readWifiData();
         numWifiData = readNumWifiData();
+        trainedQueueData = readQueueData();
 
         wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         if (wifiManager.isWifiEnabled() == false) {
@@ -124,10 +125,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         wifiReceiver = new WifiReceiver();
         registerReceiver(wifiReceiver, new
                 IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
-
-//        trainedData = readFile("trained_data.txt");
-//        wifiData = readWifiFile("wifiFile.txt");
-//        Toast.makeText(getBaseContext(), filestuff, Toast.LENGTH_SHORT).show();
 
         Button wifi = (Button) findViewById(R.id.locateMe);
         wifi.setOnClickListener(new View.OnClickListener() {
@@ -268,7 +265,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 for(double j : probabilities){
                     sum += j;
                 }
-                System.out.println("calculated sum: " + sum);
                 for(int j=0; j<probabilities.length; j++){
                     probabilities[j] += .000000001;
                     probabilities[j] /= sum + (.000000001 * 19);
@@ -398,7 +394,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 //ONLY XYZ VALUES TO FILE
                 calculatedValuesFileOSW.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
                 Double[] dataPoint = {xSlope, ySlope, zSlope, xDiff, yDiff, zDiff};
-/*
+
                 boolean walking = compareToQueueData(dataPoint, 3);
 //                Log.d(TAG, Arrays.toString(queue));
                 if(walking){
@@ -409,7 +405,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     //majority value is 0
                     Toast.makeText(getBaseContext(), "Standing Still", Toast.LENGTH_SHORT).show();
                 }
-                */
             }
             catch (IOException e) {
                 Log.e("Writing Failure", "File 2 write failed: " + e.toString());
@@ -446,13 +441,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         {
             Log.e("Pause Failure", "Didn't Successfully Pause: " + e.toString());
         }
-//        senSensorManager.unregisterListener(this);
+        senSensorManager.unregisterListener(this);
     }
 
     protected boolean compareToQueueData(Double[] point, int k){
 //        double [][] trainingData = new double[10][10];
         PriorityQueue<DataPoint> nearestNeighbors = new PriorityQueue<DataPoint>();
-        for(Double[] data : trainedData){
+        for(Double[] data : trainedQueueData){
             DataPoint dpoint = new DataPoint(data, point);
             nearestNeighbors.add(dpoint);
         }
@@ -466,7 +461,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     protected void onResume() { //Restart the logging, adding more sensor data to the file
         super.onResume();
-//        senSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        senSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
 
     }
 
@@ -481,7 +476,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         {
             Log.e("Closing Failure", "Can't Close: " + e.toString());
         }
-//        senSensorManager.unregisterListener(this);
+        senSensorManager.unregisterListener(this);
     }
 
     protected void onStop(){
@@ -512,7 +507,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     double[] probs = new double[parse.length];
                     for(int i=0; i<parse.length; i++){
                         probs[i] = Double.parseDouble(parse[i]);
-                        System.out.println(probs[i]);
                     }
                     map.add(probs);
                 }
@@ -582,14 +576,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return map;
     }
 
-    private ArrayList<Double[]> readQueueData(String fileName) {
-        String ret = ""; //start with blank file
+    private ArrayList<Double[]> readQueueData() {
         ArrayList<Double[]> finalData = new ArrayList<Double[]>();
         try
         {
             Context context = this;
             AssetManager am = context.getAssets();
-            InputStream inputStream = am.open(fileName);
+            InputStream inputStream = am.open("queueData.txt");
 //            Log.e("test", "test");
 //            InputStream inputStream = openFileInput(fileName); //input stream
             if (inputStream != null) //make sure the file isn't empty
@@ -610,7 +603,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     //*** Not sure how to add new line here so it's easier to read ***
                 }
                 inputStream.close();
-                ret = stringBuilder.toString();
             }
         }
         catch (FileNotFoundException e)
