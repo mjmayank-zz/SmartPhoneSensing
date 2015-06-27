@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Scanner;
@@ -72,7 +73,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     HashMap<String, double[][]> globalTrainedWifiData;
     HashMap<String, ArrayList<Integer>> currSessionWifiData;
     int[] currSessionPredictions;
-    Integer[] predictions = new Integer[20];
+    long endedLine, startedLine;
+    LinkedList<Boolean> lastQueue;
+
     boolean stop;
 
     @Override
@@ -86,7 +89,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         yArr = new ArrayList<Double>();
         zArr = new ArrayList<Double>();
         timeArr = new ArrayList<Long>();
-
+        lastQueue = new LinkedList<>();
 //        probabilities = new double[19];
         resetProbabilities();
 
@@ -114,10 +117,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Toast.makeText(getBaseContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
         }
 
-        globalTrainedWifiData = readWifiData();
-        numWifiData = readNumWifiData();
-        trainedQueueData = readQueueData();
-
         wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         if (wifiManager.isWifiEnabled() == false) {
             wifiManager.setWifiEnabled(true);
@@ -129,6 +128,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Button wifi = (Button) findViewById(R.id.locateMe);
         wifi.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                globalTrainedWifiData = readWifiData();
+                numWifiData = readNumWifiData();
                 prob.setText("Locating you...");
                 stop = false;
                 resetProbabilities();
@@ -147,23 +148,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         });
 
-        CountDownTimer myCountDown = new CountDownTimer(10000, 10000) {
-            public void onTick(long millisUntilFinished) {
-                //update the UI with the new count
+        Button queue = (Button) findViewById(R.id.queue);
+        queue.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                endedLine = System.currentTimeMillis();
+                startedLine = System.currentTimeMillis();
+                trainedQueueData = readQueueData();
             }
-
-            public void onFinish() {
-                if(cont == 0)
-                {
-                    queueIt.setText("In Queue");
-                }
-                if(cont == 1)
-                {
-                    queueIt.setText("Out of Queue: Moving Too Much");
-                }
-                //start the activity
-            }
-        };
+        });
 
         senSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE); //Sensor Management
         senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -389,25 +381,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             xDiff = Math.abs(xMax - xMin);
             yDiff = Math.abs(yMax - yMin);
             zDiff = Math.abs(zMax - zMin);
-            try
-            {
                 //ONLY XYZ VALUES TO FILE
-                calculatedValuesFileOSW.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
+//                calculatedValuesFileOSW.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
+            if(trainedQueueData != null) {
                 Double[] dataPoint = {xSlope, ySlope, zSlope, xDiff, yDiff, zDiff};
-
                 boolean walking = compareToQueueData(dataPoint, 3);
 //                Log.d(TAG, Arrays.toString(queue));
-                if(walking){
+                if (walking) {
                     //majority value is 1
                     Toast.makeText(getBaseContext(), "Moving around", Toast.LENGTH_SHORT).show();
-                }
-                else{
+                    if(System.currentTimeMillis() - endedLine > 100){
+                        long timeInLine = endedLine - startedLine;
+                    }
+                } else {
                     //majority value is 0
                     Toast.makeText(getBaseContext(), "Standing Still", Toast.LENGTH_SHORT).show();
+                    endedLine = System.currentTimeMillis();
                 }
-            }
-            catch (IOException e) {
-                Log.e("Writing Failure", "File 2 write failed: " + e.toString());
             }
         }
 //
@@ -444,11 +434,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         senSensorManager.unregisterListener(this);
     }
 
+    protected Double[] normalize(Double[] point){
+
+        return point;
+    }
+
     protected boolean compareToQueueData(Double[] point, int k){
 //        double [][] trainingData = new double[10][10];
         PriorityQueue<DataPoint> nearestNeighbors = new PriorityQueue<DataPoint>();
         for(Double[] data : trainedQueueData){
-            DataPoint dpoint = new DataPoint(data, point);
+            DataPoint dpoint = new DataPoint(data, normalize(point));
             nearestNeighbors.add(dpoint);
         }
 
