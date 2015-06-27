@@ -445,9 +445,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         senSensorManager.unregisterListener(this);
     }
 
-    protected Double[] normalize(Double[] point){
-
-        return point;
+    protected Double[] normalize(Double[] point, Double[] mean, Double[] standardDeviation){
+        Double[] values = new Double[point.length];
+        for(int i=0; i<point.length; i++){
+            values[i] = (point[i] - mean[i])/standardDeviation[i];
+        }
+        return values;
     }
 
     protected boolean compareToQueueData(Double[] point, int k){
