@@ -321,7 +321,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onSensorChanged(SensorEvent event)
     {
-        int k = 3;
+        int firstPassk = 3;
+        int secondPassk = 5;
         Double xSlope, ySlope, zSlope, xMax, yMax, zMax, xMin, yMin, zMin, xDiff, yDiff, zDiff;
 //        Log.d("Test", Arrays.toString(event.values)); //Displaying Values as they change
 //        Xpoint.setText("X-Coordinate: " + event.values[0]); //Setting textView values to sensor values
@@ -354,7 +355,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 
 
-        if (counter >= k) //if we have at least 3 lines to analyze to new file
+        if (counter >= firstPassk) //if we have at least 3 lines to analyze to new file
         {
             List<Double> xTemp = new ArrayList<Double>();
             List<Double> yTemp = new ArrayList<Double>();
@@ -364,13 +365,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             //Log.e("counter - 1", String.valueOf(counter-1));
             //Log.e("counter - k", String.valueOf(counter-k));
 
-            xTemp = xArr.subList(counter - k, counter-1);
-            yTemp = yArr.subList(counter-k, counter-1);
-            zTemp = zArr.subList(counter-k, counter-1);
+            xTemp = xArr.subList(counter - firstPassk, counter-1);
+            yTemp = yArr.subList(counter-firstPassk, counter-1);
+            zTemp = zArr.subList(counter-firstPassk, counter-1);
 
-            xSlope = (xArr.get(counter-1) - xArr.get(counter - k))/(timeArr.get(counter-1) - timeArr.get(counter-k)); //calculate everything
-            ySlope = (yArr.get(counter-1) - yArr.get(counter-k))/(timeArr.get(counter-1) - timeArr.get(counter-k));
-            zSlope = (zArr.get(counter-1) - zArr.get(counter-k))/(timeArr.get(counter-1) - timeArr.get(counter-k));
+            xSlope = (xArr.get(counter-1) - xArr.get(counter - firstPassk))/(timeArr.get(counter-1) - timeArr.get(counter-firstPassk)); //calculate everything
+            ySlope = (yArr.get(counter-1) - yArr.get(counter-firstPassk))/(timeArr.get(counter-1) - timeArr.get(counter-firstPassk));
+            zSlope = (zArr.get(counter-1) - zArr.get(counter-firstPassk))/(timeArr.get(counter-1) - timeArr.get(counter-firstPassk));
 
             xMax = Collections.max(xTemp);
             yMax = Collections.max(yTemp);
@@ -385,9 +386,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //                calculatedValuesFileOSW.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
             if(trainedQueueData != null) {
                 Double[] dataPoint = {xSlope, ySlope, zSlope, xDiff, yDiff, zDiff};
-                lastQueue.pop();
+                if(lastQueue.size() > secondPassk) {
+                    lastQueue.pop();
+                }
                 lastQueue.push(compareToQueueData(dataPoint, 3));
-                Boolean[] array = (Boolean[]) lastQueue.toArray();
+                Boolean[] array = lastQueue.toArray(new Boolean[lastQueue.size()]);
                 int count = 0;
                 for(Boolean bool : array){
                     if(bool)
