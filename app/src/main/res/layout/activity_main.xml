@@ -113,4 +113,13 @@
         android:layout_alignRight="@+id/cellText"
         android:layout_alignEnd="@+id/cellText" />
 
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Walking"
+        android:id="@+id/walking"
+        android:layout_below="@+id/wifiData"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
 </RelativeLayout>

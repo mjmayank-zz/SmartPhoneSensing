@@ -12,16 +12,14 @@ import android.hardware.SensorManager;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.os.CountDownTimer;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import org.w3c.dom.Text;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -47,23 +45,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final String TAG = MainActivity.class.getSimpleName();
     private SensorManager senSensorManager;
     private Sensor senAccelerometer;
-    //TextView Xpoint, Ypoint, Zpoint;
-    int still = 0;
-    int walking = 0;
-    int cont = 0;
-    float last_x = 0;
-    float last_y = 0;
-    float last_z = 0;
-    float curr_x = 0;
-    float curr_y = 0;
-    float curr_z = 0;
-    TextView wifiDataT, prob, belief, queueIt;
+    TextView wifiDataT, probTextView, belief, queueTextView;
     int count = 0;
     OutputStreamWriter accelerometerFileOSW, calculatedValuesFileOSW, wifiFileOSW, confMatrixFileOSW;
     ArrayList<Double> xArr, yArr, zArr;
     ArrayList<Long> timeArr;
     int counter = 0;
-    ArrayList<Double[]> trainedQueueData;
+//    ArrayList<Double[]> trainedQueueData;
+    KDTree<Integer> trainedQueueData;
     ArrayList<double[]> numWifiData;
     WifiManager wifiManager;
     WifiReceiver wifiReceiver;
@@ -75,6 +64,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     int[] currSessionPredictions;
     long endedLine, startedLine;
     LinkedList<Boolean> lastQueue;
+    double[] queueMeans, queueStandardDeviations;
+    int isWalking;
 
     boolean stop;
 
@@ -83,8 +74,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         int intervalGroupSize = 3;
-        prob = (TextView)findViewById(R.id.probability);
-        queueIt = (TextView) findViewById(R.id.queueStatus);
+        isWalking = 2;
+        probTextView = (TextView)findViewById(R.id.probability);
+        queueTextView = (TextView) findViewById(R.id.queueStatus);
         xArr = new ArrayList<Double>();
         yArr = new ArrayList<Double>();
         zArr = new ArrayList<Double>();
@@ -130,12 +122,24 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             public void onClick(View v) {
                 globalTrainedWifiData = readWifiData();
                 numWifiData = readNumWifiData();
-                prob.setText("Locating you...");
+                probTextView.setText("Locating you...");
                 stop = false;
                 resetProbabilities();
                 wifiDataT.setText("Scanning");
                 Toast.makeText(getBaseContext(), "scanning", Toast.LENGTH_SHORT).show();
                 wifiManager.startScan();
+            }
+        });
+
+        Button walking = (Button) findViewById(R.id.walking);
+        walking.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                if(isWalking>0){
+                    isWalking = 0;
+                }
+                else{
+                    isWalking = 1;
+                }
             }
         });
 
@@ -148,18 +152,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         });
 
+        queueTextView.setText("Back of the queue");
+
         Button queue = (Button) findViewById(R.id.queue);
         queue.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                queueTextView.setText("Starting back of the queue");
                 endedLine = System.currentTimeMillis();
                 startedLine = System.currentTimeMillis();
-                trainedQueueData = readQueueData();
+                ArrayList<double []> tempQData = readQueueData();
+                trainedQueueData = new KDTree.Euclidean<>(tempQData.get(0).length-1);
+                for(double[] temp : tempQData){
+                    trainedQueueData.addPoint(Arrays.copyOfRange(temp, 0, temp.length - 1), (int) temp[temp.length - 1]);
+                }
+                System.out.println(trainedQueueData);
             }
         });
 
         senSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE); //Sensor Management
         senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        senSensorManager.registerListener(this, senAccelerometer , SensorManager.SENSOR_DELAY_NORMAL);
+        senSensorManager.registerListener(this, senAccelerometer , 1000);
 
 //        Xpoint = (TextView) findViewById(R.id.xCoord); //Change values of textViews
 //        Ypoint = (TextView) findViewById(R.id.yCoord);
@@ -183,14 +195,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             List<ScanResult> results = wifiManager.getScanResults();
             ArrayList<WifiReading> readings = new ArrayList<>();
             try {
-                long time = System.nanoTime();
+                long time = System.currentTimeMillis();
                 for (int n = 0; n < results.size(); n++) {
 // SSID contains name of AP and level contains RSSI
 
                     try //Write values to the file
                     {
-                        String string = time + ", " + ((TextView)findViewById(R.id.cellText)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).BSSID + ", " + results.get(n).level + "\n";
-                        wifiFileOSW.write(string);
+                        if(isWalking != 2) {
+                            String string = time + ", " + ((TextView) findViewById(R.id.cellText)).getText() + ", " + results.get(n).SSID + ", " + results.get(n).BSSID + ", " + results.get(n).level + "\n";
+                            wifiFileOSW.write(string);
+                        }
                     }
                     catch (IOException e) {
                         Log.e("Writing Failure", "File 1 write failed: " + e.toString());
@@ -205,7 +219,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 if(!stop) {
                     int total_pred = calcMode();
                     if(total_pred != 0) {
-                        prob.setText("You are in cell " + total_pred);
+                        probTextView.setText("You are in cell " + total_pred);
                         confMatrixFileOSW.write(total_pred + "," + ((TextView) findViewById(R.id.cellText)).getText() + "\n");
                     }
                     Toast.makeText(getBaseContext(), "Cell " + prediction, Toast.LENGTH_SHORT).show();
@@ -274,6 +288,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 System.out.println("Couldn't find MAC");
             }
         }
+        System.out.println(predicted_cell);
         return predicted_cell;
     }
 
@@ -321,26 +336,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onSensorChanged(SensorEvent event)
     {
-        int firstPassk = 3;
-        int secondPassk = 5;
-        Double xSlope, ySlope, zSlope, xMax, yMax, zMax, xMin, yMin, zMin, xDiff, yDiff, zDiff;
-//        Log.d("Test", Arrays.toString(event.values)); //Displaying Values as they change
-//        Xpoint.setText("X-Coordinate: " + event.values[0]); //Setting textView values to sensor values
-//        Ypoint.setText("Y-Coordinate: " + event.values[1]);
-//        Zpoint.setText("Z-Coordinate: " + event.values[2]);
+        int firstPassk = 9;
+        double xSlope, ySlope, zSlope, xVar, yVar, zVar, xDiff, yDiff, zDiff;
+
         long time = System.nanoTime();
         try //Write values to the file
         {
+            float curr_x;
+            float curr_y;
+            float curr_z;
             curr_x = event.values[0];
             curr_y = event.values[1];
             curr_z = event.values[2];
-            accelerometerFileOSW.write(time + ", " + curr_x + ", " + curr_y + ", " + curr_z + "\n");
-            //See how current values change with past ones to see if movement or not
-            if(curr_x > 0.1 && curr_y > 0.1 && curr_z > 0.1)
-            {
-                //moving
-
-            }
+            accelerometerFileOSW.write(time + ", " + curr_x + ", " + curr_y + ", " + curr_z + ", " + isWalking + "\n");
         }
         catch (IOException e) {
             Log.e("Writing Failure", "File 1 write failed: " + e.toString());
@@ -353,74 +361,113 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         zArr.add((double)event.values[2]);
         timeArr.add(time);
 
-
-
-        if (counter >= firstPassk) //if we have at least 3 lines to analyze to new file
+        if (counter >= firstPassk && (counter % firstPassk) == 0) //if we have at least 3 lines to analyze to new file
         {
-            List<Double> xTemp = new ArrayList<Double>();
-            List<Double> yTemp = new ArrayList<Double>();
-            List<Double> zTemp = new ArrayList<Double>();
-            List<Long> timeTemp = new ArrayList<Long>();
 
-            //Log.e("counter - 1", String.valueOf(counter-1));
-            //Log.e("counter - k", String.valueOf(counter-k));
+            xSlope = (xArr.get(firstPassk-1) - xArr.get(0))/(timeArr.get(firstPassk-1) - timeArr.get(0)); //calculate everything
+            ySlope = (yArr.get(firstPassk-1) - yArr.get(0))/(timeArr.get(firstPassk-1) - timeArr.get(0));
+            zSlope = (zArr.get(firstPassk-1) - zArr.get(0))/(timeArr.get(firstPassk-1) - timeArr.get(0));
 
-            xTemp = xArr.subList(counter - firstPassk, counter-1);
-            yTemp = yArr.subList(counter-firstPassk, counter-1);
-            zTemp = zArr.subList(counter-firstPassk, counter-1);
+            xVar = calcVar(xArr);
+            yVar = calcVar(yArr);
+            zVar = calcVar(zArr);
 
-            xSlope = (xArr.get(counter-1) - xArr.get(counter - firstPassk))/(timeArr.get(counter-1) - timeArr.get(counter-firstPassk)); //calculate everything
-            ySlope = (yArr.get(counter-1) - yArr.get(counter-firstPassk))/(timeArr.get(counter-1) - timeArr.get(counter-firstPassk));
-            zSlope = (zArr.get(counter-1) - zArr.get(counter-firstPassk))/(timeArr.get(counter-1) - timeArr.get(counter-firstPassk));
+            xDiff = Math.abs(Collections.max(xArr) - Collections.min(xArr));
+            yDiff = Math.abs(Collections.max(yArr) - Collections.min(yArr));
+            zDiff = Math.abs(Collections.max(zArr) - Collections.min(zArr));
 
-            xMax = Collections.max(xTemp);
-            yMax = Collections.max(yTemp);
-            zMax = Collections.max(zTemp);
-            xMin = Collections.min(xTemp);
-            yMin = Collections.min(yTemp);
-            zMin = Collections.min(zTemp);
-            xDiff = Math.abs(xMax - xMin);
-            yDiff = Math.abs(yMax - yMin);
-            zDiff = Math.abs(zMax - zMin);
-                //ONLY XYZ VALUES TO FILE
-//                calculatedValuesFileOSW.write(xSlope + ", " + ySlope + ", " + zSlope + ", " + xMax + ", " + yMax + ", " + zMax  + ", " + xMin + ", " + yMin + ", " + zMin  + ", " + xDiff + ", " + yDiff + ", " + zDiff + "\n");
             if(trainedQueueData != null) {
-                Double[] dataPoint = {xSlope, ySlope, zSlope, xDiff, yDiff, zDiff};
-                if(lastQueue.size() > secondPassk) {
-                    lastQueue.pop();
+                int secondPassk = 5;
+                int knn = 5;
+                double[] dataPoint = {xSlope, ySlope, zSlope, xVar, yVar, zVar, xDiff, yDiff, zDiff};
+                if(lastQueue.size() >= secondPassk) {
+                    lastQueue.pollLast();
                 }
-                lastQueue.push(compareToQueueData(dataPoint, 3));
+                Boolean temp = compareToQueueData(dataPoint, knn);
+                lastQueue.push(temp);
                 Boolean[] array = lastQueue.toArray(new Boolean[lastQueue.size()]);
                 int count = 0;
                 for(Boolean bool : array){
+                    System.out.print(bool);
                     if(bool)
                         count++;
                 }
-                boolean walking = count > array.length/2;
-//                Log.d(TAG, Arrays.toString(queue));
+                System.out.println(array.length/2.0);
+                boolean walking = count > array.length/2.0;
                 if (walking) {
                     //majority value is 1
-                    Toast.makeText(getBaseContext(), "Moving around", Toast.LENGTH_SHORT).show();
-                    if(System.currentTimeMillis() - endedLine > 100){
+                    System.out.println("walking");
+//                    Toast.makeText(getBaseContext(), "Moving around", Toast.LENGTH_SHORT).show();
+                    queueTextView.setText("Moving");
+                    if(System.currentTimeMillis() - endedLine > 10000){
                         long timeInLine = endedLine - startedLine;
                     }
                 } else {
+                    System.out.println("standing");
                     //majority value is 0
-                    Toast.makeText(getBaseContext(), "Standing Still", Toast.LENGTH_SHORT).show();
+//                    Toast.makeText(getBaseContext(), "Standing Still", Toast.LENGTH_SHORT).show();
+                    queueTextView.setText("Standing Still");
                     endedLine = System.currentTimeMillis();
                 }
             }
+            xArr = new ArrayList<>();
+            yArr = new ArrayList<>();
+            zArr = new ArrayList<>();
         }
-//
-//        if(counter <= 2) //assigning first row of xyz **happens once
-//        {
-//            timeOne = time;
-//            xyzvals[counter][0] = (double)event.values[0];
-//            xyzvals[counter][1] = (double)event.values[1];
-//            xyzvals[counter][2] = (double)event.values[2];
-//        }
         counter ++;
     }
+
+    protected double[] normalize(double[] point, double[] mean, double[] standardDeviation){
+        double[] values = new double[point.length];
+        for (int i = 0; i < point.length; i++) {
+            values[i] = Math.abs((point[i] - mean[i])/standardDeviation[i]);
+        }
+        return values;
+    }
+
+    protected boolean compareToQueueData(double[] point, int k){
+        ArrayList<KDTree.SearchResult<Integer>> results = trainedQueueData.nearestNeighbours(normalize(point, queueMeans, queueStandardDeviations), k);
+
+        Integer numVal = 0;
+        for(KDTree.SearchResult<Integer> i : results) {
+            numVal += i.payload;
+        }
+//        System.out.println(numVal);
+//        System.out.println(k/2.0);
+//        System.out.println(numVal > k/2.0);
+        return numVal > k/2.0;
+    }
+
+    protected double calcVar(ArrayList<Double> array){
+        double sum = 0.0;
+        for(Double val : array){
+            sum += val;
+        }
+        double mean = sum/array.size();
+        double variance = 0.0;
+        for(Double val : array){
+            variance += Math.pow((val-mean), 2);
+        }
+        return variance;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy)
@@ -445,32 +492,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         senSensorManager.unregisterListener(this);
     }
 
-    protected Double[] normalize(Double[] point, Double[] mean, Double[] standardDeviation){
-        Double[] values = new Double[point.length];
-        for(int i=0; i<point.length; i++){
-            values[i] = (point[i] - mean[i])/standardDeviation[i];
-        }
-        return values;
-    }
-
-    protected boolean compareToQueueData(Double[] point, int k){
-//        double [][] trainingData = new double[10][10];
-        PriorityQueue<DataPoint> nearestNeighbors = new PriorityQueue<DataPoint>();
-        for(Double[] data : trainedQueueData){
-            DataPoint dpoint = new DataPoint(data, normalize(point));
-            nearestNeighbors.add(dpoint);
-        }
-
-        int numVal = 0;
-        for(int i = 0; i<k; i++){
-            numVal += nearestNeighbors.poll().value;
-        }
-        return numVal > k/2.0;
-    }
-
     protected void onResume() { //Restart the logging, adding more sensor data to the file
         super.onResume();
-        senSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        senSensorManager.registerListener(this, senAccelerometer, 10);
 
     }
 
@@ -585,8 +609,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return map;
     }
 
-    private ArrayList<Double[]> readQueueData() {
-        ArrayList<Double[]> finalData = new ArrayList<Double[]>();
+    private ArrayList<double[]> readQueueData() {
+        ArrayList<double[]> finalData = new ArrayList<double[]>();
         try
         {
             Context context = this;
@@ -603,7 +627,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 while ((receiveString = bufferedReader.readLine())!= null) //go line by line
                 {
                     String[] rowData = receiveString.split(",");
-                    Double[] doubleData = new Double[rowData.length];
+                    double[] doubleData = new double[rowData.length];
                     for(int i = 0; i<rowData.length; i++){
                         doubleData[i] = Double.parseDouble(rowData[i]);
                     }
@@ -622,7 +646,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         {
             Log.e("Reading Failure", "Can not read file: " + e.toString());
         }
-
+        queueMeans = finalData.get(0);
+        queueStandardDeviations = finalData.get(1);
+        finalData.remove(1);
+        finalData.remove(0);
+        System.out.println("Finished reading");
+        Toast.makeText(getBaseContext(), "Finished reading", Toast.LENGTH_SHORT).show();
         return finalData;
     }
 
@@ -643,17 +672,20 @@ class DataPoint implements Comparable<DataPoint>{
     int value;
 
     public DataPoint(Double[] _data, Double[] mainPoint){
-        data = _data;
+        data = Arrays.copyOfRange(_data, 0, _data.length-1);
+        System.out.println(data.length);
         value = _data[data.length-1].intValue();
-        distance = calculateDistance(mainPoint);
+//        distance = calculateDistance(mainPoint);
+        distance = 0.0;
     }
 
     public Double calculateDistance(Double[] otherPoint){
+        System.out.println(data.length);
+        System.out.println(otherPoint.length);
         Double dist = 0.0;
         for(int i=0; i<otherPoint.length; i++){
             dist += Math.pow((data[i] - otherPoint[i]), 2);
         }
-        dist = Math.pow(dist, .5);
         distance = dist;
         return distance;
     }
