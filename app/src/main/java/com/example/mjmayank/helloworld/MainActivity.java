@@ -15,7 +15,6 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -35,7 +34,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.PriorityQueue;
 import java.util.Scanner;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -45,13 +43,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final String TAG = MainActivity.class.getSimpleName();
     private SensorManager senSensorManager;
     private Sensor senAccelerometer;
-    TextView wifiDataT, probTextView, belief, queueTextView;
+    TextView wifiDataT, probTextView, queueTextView;
     int count = 0;
     OutputStreamWriter accelerometerFileOSW, calculatedValuesFileOSW, wifiFileOSW, confMatrixFileOSW;
     ArrayList<Double> xArr, yArr, zArr;
     ArrayList<Long> timeArr;
     int counter = 0;
-//    ArrayList<Double[]> trainedQueueData;
     KDTree<Integer> trainedQueueData;
     ArrayList<double[]> numWifiData;
     WifiManager wifiManager;
@@ -62,7 +59,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     HashMap<String, double[][]> globalTrainedWifiData;
     HashMap<String, ArrayList<Integer>> currSessionWifiData;
     int[] currSessionPredictions;
-    long endedLine, startedLine;
+    long endedLine, startedLine, timeInQueue, startedWaiting;
+    int peopleServed;
     LinkedList<Boolean> lastQueue;
     double[] queueMeans, queueStandardDeviations;
     int isWalking;
@@ -73,7 +71,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        int intervalGroupSize = 3;
         isWalking = 2;
         probTextView = (TextView)findViewById(R.id.probability);
         queueTextView = (TextView) findViewById(R.id.queueStatus);
@@ -82,7 +79,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         zArr = new ArrayList<Double>();
         timeArr = new ArrayList<Long>();
         lastQueue = new LinkedList<>();
-//        probabilities = new double[19];
         resetProbabilities();
 
         try {
@@ -158,8 +154,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         queue.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 queueTextView.setText("Starting back of the queue");
+                peopleServed = 0;
                 endedLine = System.currentTimeMillis();
                 startedLine = System.currentTimeMillis();
+                startedWaiting = System.currentTimeMillis();
                 ArrayList<double []> tempQData = readQueueData();
                 trainedQueueData = new KDTree.Euclidean<>(tempQData.get(0).length-1);
                 for(double[] temp : tempQData){
@@ -173,9 +171,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         senSensorManager.registerListener(this, senAccelerometer , 1000);
 
-//        Xpoint = (TextView) findViewById(R.id.xCoord); //Change values of textViews
-//        Ypoint = (TextView) findViewById(R.id.yCoord);
-//        Zpoint = (TextView) findViewById(R.id.zCoord);
         wifiDataT = (TextView) findViewById(R.id.wifiData);
 
     }
@@ -342,13 +337,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         long time = System.nanoTime();
         try //Write values to the file
         {
-            float curr_x;
-            float curr_y;
-            float curr_z;
-            curr_x = event.values[0];
-            curr_y = event.values[1];
-            curr_z = event.values[2];
-            accelerometerFileOSW.write(time + ", " + curr_x + ", " + curr_y + ", " + curr_z + ", " + isWalking + "\n");
+            accelerometerFileOSW.write(time + ", " + event.values[0] + ", " + event.values[1] + ", " + event.values[2] + ", " + isWalking + "\n");
         }
         catch (IOException e) {
             Log.e("Writing Failure", "File 1 write failed: " + e.toString());
@@ -399,8 +388,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     System.out.println("walking");
 //                    Toast.makeText(getBaseContext(), "Moving around", Toast.LENGTH_SHORT).show();
                     queueTextView.setText("Moving");
-                    if(System.currentTimeMillis() - endedLine > 10000){
+                    long currTime = System.currentTimeMillis();
+                    if(currTime - endedLine > 10000){
                         long timeInLine = endedLine - startedLine;
+                        queueTextView.setText("You were in line for " + timeInLine/1000.0 + " seconds, \nAverage waiting time: " + (timeInQueue/(peopleServed*1.0))/1000.0 + " seconds");
+                        trainedQueueData = null;
+                    }
+                    if(startedWaiting != 0 && currTime - startedWaiting > 1000.0) {
+                        timeInQueue += currTime - startedWaiting;
+                        startedWaiting = 0;
+                        peopleServed += 1;
                     }
                 } else {
                     System.out.println("standing");
@@ -408,6 +405,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //                    Toast.makeText(getBaseContext(), "Standing Still", Toast.LENGTH_SHORT).show();
                     queueTextView.setText("Standing Still");
                     endedLine = System.currentTimeMillis();
+                    if(startedWaiting == 0){
+                        startedWaiting = System.currentTimeMillis();
+                    }
                 }
             }
             xArr = new ArrayList<>();
@@ -432,9 +432,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         for(KDTree.SearchResult<Integer> i : results) {
             numVal += i.payload;
         }
-//        System.out.println(numVal);
-//        System.out.println(k/2.0);
-//        System.out.println(numVal > k/2.0);
         return numVal > k/2.0;
     }
 
@@ -523,17 +520,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         try
         {
-            Context context = this;
             AssetManager am = getAssets();
             InputStream inputStream = am.open("numWifiData.txt");
 //            Log.e("test", "test");
-//            InputStream inputStream = openFileInput(fileName); //input stream
             if (inputStream != null) //make sure the file isn't empty
             {
                 InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
                 BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
                 String receiveString = "";
-                StringBuilder stringBuilder = new StringBuilder();
                 while ((receiveString = bufferedReader.readLine())!= null) //go line by line
                 {
                     String[] parse = receiveString.split(",");
@@ -560,22 +554,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     protected HashMap<String, double[][]> readWifiData()
     {
-        Scanner input = null;
         HashMap<String, double[][]> map = new HashMap<String, double[][]>();
 
         try
         {
-            Context context = this;
             AssetManager am = getAssets();
             InputStream inputStream = am.open("wifiData.txt");
-//            Log.e("test", "test");
-//            InputStream inputStream = openFileInput(fileName); //input stream
             if (inputStream != null) //make sure the file isn't empty
             {
                 InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
                 BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
                 String receiveString = "";
-                StringBuilder stringBuilder = new StringBuilder();
                 while ((receiveString = bufferedReader.readLine())!= null) //go line by line
                 {
                     String[] parse = receiveString.split(",");
@@ -616,8 +605,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Context context = this;
             AssetManager am = context.getAssets();
             InputStream inputStream = am.open("queueData.txt");
-//            Log.e("test", "test");
-//            InputStream inputStream = openFileInput(fileName); //input stream
             if (inputStream != null) //make sure the file isn't empty
             {
                 InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
@@ -673,7 +660,6 @@ class DataPoint implements Comparable<DataPoint>{
 
     public DataPoint(Double[] _data, Double[] mainPoint){
         data = Arrays.copyOfRange(_data, 0, _data.length-1);
-        System.out.println(data.length);
         value = _data[data.length-1].intValue();
 //        distance = calculateDistance(mainPoint);
         distance = 0.0;
